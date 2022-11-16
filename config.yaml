@@ -1,0 +1,19 @@
+log:
+  level: debug
+  disable_sentry: true
+
+listener:
+  addr: :8000
+
+cop:
+  disabled: true
+  endpoint: "http://..."
+  upstream: "http://..."
+  service_name: uniswapv2-indexer
+  service_port: 80
+
+contracts:
+  factory: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"
+
+ethereum:
+  node: "wss://eth-mainnet.g.alchemy.com/v2/"
