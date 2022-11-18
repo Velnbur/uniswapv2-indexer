@@ -1,17 +1,22 @@
 package indexer
 
-type Node struct {
-	Symbol string
+import (
+	"github.com/Velnbur/uniswapv2-indexer/internal/contracts"
+	"github.com/ethereum/go-ethereum/common"
+)
 
-	weights map[string]map[string]int64
-	routes  map[string]*Node
+type Node struct {
+	Token common.Address
+
+	weights *WeightsMap
+	routes  map[common.Address]*Node
 }
 
-func NewNode(symbol string) *Node {
+func NewNode(addr common.Address) *Node {
 	return &Node{
-		Symbol:  symbol,
-		routes:  make(map[string]*Node),
-		weights: make(map[string]map[string]int64),
+		Token:   addr,
+		routes:  make(map[common.Address]*Node),
+		weights: NewWeightsMap(),
 	}
 }
 
@@ -25,7 +30,7 @@ func NewGraph() *Graph {
 	}
 }
 
-func (g *Graph) AddPair(pair Pair) {
+func (g *Graph) AddPair(pair *contracts.UniswapV2Pair) {
 	node, ok := g.nodes[pair.Token1]
 	if !ok {
 		node = NewNode(pair.Token1)
@@ -41,19 +46,6 @@ func (g *Graph) indexWeights() {
 		visited[symbol] = node
 		unvisited := make(map[string]*Node, len(g.nodes)-1)
 
-		for _, node := range g.nodes {
-			if node.Symbol == symbol {
-				continue
-			}
-			unvisited[node.Symbol] = node
-		}
-
-		weights := make(map[string]map[string]int64)
-		for _, visitedNode := range visited {
-			for _, edge := range visitedNode.routes {
-				weights[visitedNode.Symbol][edge.Symbol] = visitedNode.weights[visitedNode.Symbol][edge.Symbol]
-			}
-		}
 	}
 
 }
