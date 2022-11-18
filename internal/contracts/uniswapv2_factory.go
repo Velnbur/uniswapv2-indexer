@@ -2,7 +2,6 @@ package contracts
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-redis/redis/v8"
+	"github.com/pkg/errors"
 	"gitlab.com/distributed_lab/logan/v3"
 
 	uniswapv2factory "github.com/Velnbur/uniswapv2-indexer/contracts/uniswapv2-factory"
@@ -26,7 +26,7 @@ type UniswapV2Factory struct {
 
 // NewUniswapV2Factory creates a new UniswapV2Factory instance
 func NewUniswapV2Factory(
-	address common.Address, client *ethclient.Client, redis *redis.Client,
+	address common.Address, client *ethclient.Client, redis *redis.Client, logger *logan.Entry,
 ) (*UniswapV2Factory, error) {
 	contract, err := uniswapv2factory.NewUniswapV2Factory(address, client)
 	if err != nil {
@@ -37,6 +37,7 @@ func NewUniswapV2Factory(
 		client:   client,
 		contract: contract,
 		redis:    redis,
+		logger:   logger,
 	}, nil
 }
 
@@ -73,7 +74,7 @@ func (u *UniswapV2Factory) AllPairs(ctx context.Context, index uint64) (*Uniswap
 		Context: ctx,
 	}, new(big.Int).SetUint64(index))
 	if err != nil {
-		return nil, errors.New("failed to get pair address from ethereum")
+		return nil, errors.Wrap(err, "failed to get pair address")
 	}
 
 	// save to redis
