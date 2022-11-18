@@ -39,7 +39,7 @@ func Run(args []string) bool {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-
+	defer cancel()
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 	go func() {
