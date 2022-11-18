@@ -36,7 +36,7 @@ func NewListener(cfg config.Config) (*Listener, error) {
 	}
 
 	factory, err := contracts.NewUniswapV2Factory(
-		cfg.ContracterCfg().Factory, client, cfg.Redis(),
+		cfg.ContracterCfg().Factory, client, cfg.Redis(), cfg.Log(),
 	)
 	if err != nil {
 		return nil, err
@@ -133,10 +133,35 @@ func (l *Listener) initialize(ctx context.Context) error {
 				}
 				return errors.Wrap(err, "failed to get pair address")
 			}
+			token0, err := pair.Token0(ctx)
+			if err != nil {
+				if strings.Contains(err.Error(), errRateLimitStr) {
+					return RetryError
+				}
+				return errors.Wrap(err, "failed to get token0 address")
+			}
+			token1, err := pair.Token1(ctx)
+			if err != nil {
+				if strings.Contains(err.Error(), errRateLimitStr) {
+					return RetryError
+				}
+				return errors.Wrap(err, "failed to get token1 address")
+			}
+			reserve0, reserve1, err := pair.GetReserves(ctx)
+			if err != nil {
+				if strings.Contains(err.Error(), errRateLimitStr) {
+					return RetryError
+				}
+				return errors.Wrap(err, "failed to get reserves")
+			}
 			l.logger.WithFields(logan.F{
-				"pair_num":  index,
-				"pair_addr": pair.Address,
-			}).Debug("got pair address")
+				"pair_num": index,
+				"address":  pair.Address,
+				"token0":   token0,
+				"token1":   token1,
+				"reserve0": reserve0,
+				"reserve1": reserve1,
+			}).Debug("got pair")
 
 			l.pairs.Set(pair.Address, pair)
 			return nil
