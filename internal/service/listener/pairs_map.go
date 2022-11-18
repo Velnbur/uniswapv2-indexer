@@ -3,16 +3,9 @@ package listener
 import (
 	"sync"
 
-	uniswapv2pair "github.com/Velnbur/uniswapv2-indexer/contracts/uniswapv2-pair"
+	"github.com/Velnbur/uniswapv2-indexer/internal/contracts"
 	"github.com/ethereum/go-ethereum/common"
 )
-
-type Pair struct {
-	Address  common.Address
-	Token0   common.Address
-	Token1   common.Address
-	Contract *uniswapv2pair.UniswapV2Pair
-}
 
 // PairsMap is a map of pairs.
 type PairsMap struct {
@@ -25,15 +18,15 @@ func NewPairsMap() *PairsMap {
 }
 
 // Get returns the value for the given key.
-func (m *PairsMap) Get(addr common.Address) *Pair {
+func (m *PairsMap) Get(addr common.Address) *contracts.UniswapV2Pair {
 	if v, ok := m.m.Load(addr); ok {
-		return v.(*Pair)
+		return v.(*contracts.UniswapV2Pair)
 	}
 	return nil
 }
 
 // Set sets the value for the given key.
-func (m *PairsMap) Set(addr common.Address, pair *Pair) {
+func (m *PairsMap) Set(addr common.Address, pair *contracts.UniswapV2Pair) {
 	m.m.Store(addr, pair)
 }
 
@@ -51,8 +44,8 @@ func (m *PairsMap) Len() int {
 }
 
 // Range calls f sequentially for each key and value present in the map.
-func (m *PairsMap) Range(f func(key common.Address, value *Pair) bool) {
+func (m *PairsMap) Range(f func(key common.Address, value *contracts.UniswapV2Pair) bool) {
 	m.m.Range(func(key, value interface{}) bool {
-		return f(key.(common.Address), value.(*Pair))
+		return f(key.(common.Address), value.(*contracts.UniswapV2Pair))
 	})
 }

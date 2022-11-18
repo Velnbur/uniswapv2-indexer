@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/go-redis/redis/v8"
 	"gitlab.com/distributed_lab/kit/comfig"
 	"gitlab.com/distributed_lab/kit/copus"
 	"gitlab.com/distributed_lab/kit/copus/types"
@@ -14,6 +15,7 @@ type Config interface {
 
 	Contracter
 	Ethereumer
+	Redis() *redis.Client
 }
 
 type config struct {
@@ -24,6 +26,8 @@ type config struct {
 
 	Contracter
 	Ethereumer
+
+	redis comfig.Once
 }
 
 func New(getter kv.Getter) Config {
