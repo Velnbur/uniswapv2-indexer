@@ -2,7 +2,9 @@ package contracts
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -15,6 +17,9 @@ import (
 )
 
 type UniswapV2Pair struct {
+	reserve0 *big.Int
+	reserve1 *big.Int
+
 	token0 *common.Address
 	token1 *common.Address
 
@@ -68,6 +73,84 @@ func (u *UniswapV2Pair) Token1(ctx context.Context) (common.Address, error) {
 	u.token1 = &tokenAddr
 
 	return *u.token1, nil
+}
+
+func (u *UniswapV2Pair) GetReserves(ctx context.Context) (*big.Int, *big.Int, error) {
+	if u.reserve0 != nil && u.reserve1 != nil {
+		return u.reserve0, u.reserve1, nil
+	}
+
+	// get from cache first
+	reserve0, reserve1, err := u.getReservesFromCache(ctx)
+	if err != nil {
+		u.logger.WithError(err).Error("failed to get reserves from cache")
+	}
+	if reserve0 != nil && reserve1 != nil {
+		u.reserve0 = reserve0
+		u.reserve1 = reserve1
+		return reserve0, reserve1, nil
+	}
+
+	reservesRes, err := u.contract.GetReserves(&bind.CallOpts{Context: ctx})
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to get reserves")
+	}
+
+	u.reserve0 = reservesRes.Reserve0
+	u.reserve1 = reservesRes.Reserve1
+
+	// store in cache
+	err = u.storeReservesInCache(ctx, reserves{reserve0, reserve1})
+	if err != nil {
+		u.logger.WithError(err).Error("failed to store reserves in cache")
+	}
+
+	return u.reserve0, u.reserve1, nil
+}
+
+type reserves struct {
+	Reserve0 *big.Int `json:"reserve0"`
+	Reserve1 *big.Int `json:"reserve1"`
+}
+
+const uniswapV2ReservesKey = "uniswapv2-pair:%s:reserves"
+
+func (u *UniswapV2Pair) getReservesFromCache(ctx context.Context) (*big.Int, *big.Int, error) {
+	key := fmt.Sprintf(uniswapV2ReservesKey, u.Address.Hex())
+
+	reservesStr, err := u.redis.Get(ctx, key).Result()
+	switch err {
+	case nil:
+		var reserves reserves
+		err = json.Unmarshal([]byte(reservesStr), &reserves)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to unmarshal reserves")
+		}
+
+		return reserves.Reserve0, reserves.Reserve1, nil
+	case redis.Nil:
+		// do nothing
+	default:
+		u.logger.WithError(err).Error("failed to get reserves from redis")
+	}
+
+	return nil, nil, nil
+}
+
+func (u *UniswapV2Pair) storeReservesInCache(ctx context.Context, reserves reserves) error {
+	key := fmt.Sprintf(uniswapV2ReservesKey, u.Address.Hex())
+
+	reservesStr, err := json.Marshal(reserves)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal reserves")
+	}
+
+	err = u.redis.Set(ctx, key, reservesStr, 0).Err()
+	if err != nil {
+		return errors.Wrap(err, "failed to set reserves in redis")
+	}
+
+	return nil
 }
 
 type tokenNumber int
