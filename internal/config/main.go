@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/Velnbur/uniswapv2-indexer/internal/contracts"
 	"github.com/go-redis/redis/v8"
 	"gitlab.com/distributed_lab/kit/comfig"
 	"gitlab.com/distributed_lab/kit/copus"
@@ -15,7 +16,9 @@ type Config interface {
 
 	Contracter
 	Ethereumer
+
 	Redis() *redis.Client
+	UniswapV2() *contracts.UniswapV2
 }
 
 type config struct {
@@ -28,7 +31,7 @@ type config struct {
 	Ethereumer
 
 	redis     comfig.Once
-	ethClient comfig.Once
+	uniswapv2 comfig.Once
 }
 
 func New(getter kv.Getter) Config {

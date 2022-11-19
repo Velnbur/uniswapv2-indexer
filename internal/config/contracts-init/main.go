@@ -5,12 +5,12 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-redis/redis/v8"
 	"github.com/pkg/errors"
 	"gitlab.com/distributed_lab/logan/v3"
 
-	"github.com/Velnbur/uniswapv2-indexer/internal/config"
 	"github.com/Velnbur/uniswapv2-indexer/internal/contracts"
 	workerspool "github.com/Velnbur/uniswapv2-indexer/pkg/workers-pool"
 )
@@ -23,16 +23,18 @@ type ContractInitializer struct {
 	uniswapV2 *contracts.UniswapV2
 }
 
-func NewContractInitializer(cfg config.Config) (*ContractInitializer, error) {
+func NewContractInitializer(
+	logger *logan.Entry, client *ethclient.Client, redis *redis.Client,
+	factoryAddr common.Address,
+) (*ContractInitializer, error) {
 	ci := &ContractInitializer{
-		logger: cfg.Log(),
-		client: cfg.EthereumClient(),
-		redis:  cfg.Redis(),
+		logger: logger,
+		client: client,
+		redis:  redis,
 	}
 
 	uniswapV2, err := contracts.NewUniswapV2(
-		cfg.ContracterCfg().Factory,
-		ci.client, ci.redis, cfg.Log(),
+		factoryAddr, ci.client, ci.redis, ci.logger,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create UniswapV2 contracts")
@@ -47,10 +49,10 @@ func NewContractInitializer(cfg config.Config) (*ContractInitializer, error) {
 // infura has better solutions for that
 const errRateLimitStr = "Your app has exceeded its compute units"
 
-func (ci *ContractInitializer) Init(ctx context.Context) error {
+func (ci *ContractInitializer) Init(ctx context.Context) (*contracts.UniswapV2, error) {
 	amount, err := ci.uniswapV2.Factory.AllPairLength(ctx)
 	if err != nil {
-		return errors.Wrap(err, "failed to get amount of pairs")
+		return nil, errors.Wrap(err, "failed to get amount of pairs")
 	}
 
 	// TODO: may be, make workers amount configurable,
@@ -82,9 +84,9 @@ func (ci *ContractInitializer) Init(ctx context.Context) error {
 	}
 
 	if err := workingPool.Run(ctx); err != nil {
-		return errors.Wrap(err, "failed to init one of the pairs")
+		return nil, errors.Wrap(err, "failed to init one of the pairs")
 	}
-	return nil
+	return ci.uniswapV2, nil
 }
 
 // TODO: move this to a separate package

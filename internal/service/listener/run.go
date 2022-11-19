@@ -11,7 +11,6 @@ func Run(ctx context.Context, cfg config.Config) {
 	if err != nil {
 		cfg.Log().WithError(err).Panic("failed to create listener")
 	}
-	defer listener.Close()
 
 	if err := listener.Run(ctx); err != nil {
 		cfg.Log().WithError(err).Panic("failed to run listener")
