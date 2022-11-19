@@ -1,4 +1,4 @@
-package listener
+package workerspool
 
 import (
 	"context"

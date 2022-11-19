@@ -26,7 +26,8 @@ type UniswapV2Factory struct {
 
 // NewUniswapV2Factory creates a new UniswapV2Factory instance
 func NewUniswapV2Factory(
-	address common.Address, client *ethclient.Client, redis *redis.Client, logger *logan.Entry,
+	address common.Address, client *ethclient.Client, redis *redis.Client,
+	logger *logan.Entry,
 ) (*UniswapV2Factory, error) {
 	contract, err := uniswapv2factory.NewUniswapV2Factory(address, client)
 	if err != nil {

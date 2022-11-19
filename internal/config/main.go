@@ -27,7 +27,8 @@ type config struct {
 	Contracter
 	Ethereumer
 
-	redis comfig.Once
+	redis     comfig.Once
+	ethClient comfig.Once
 }
 
 func New(getter kv.Getter) Config {
