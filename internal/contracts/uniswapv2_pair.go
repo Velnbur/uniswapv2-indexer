@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-redis/redis/v8"
 	"github.com/pkg/errors"
@@ -223,4 +224,10 @@ func (u *UniswapV2Pair) storeTokensInCache(
 
 func isAddressZero(address common.Address) bool {
 	return address == common.Address{}
+}
+
+func SwapTokenTopic() common.Hash {
+	tokenSwapSig := []byte("Swap(address,uint256,uint256,uint256,uint256,address)")
+	tokenSwapSigHash := crypto.Keccak256Hash(tokenSwapSig)
+	return tokenSwapSigHash
 }
