@@ -24,14 +24,14 @@ func NewSwapEventChan() *ReservesUpdateChan {
 }
 
 // TODO: may be, update it to more proper value
-const DefaultSwapEventChannelLen = 256
+const DefaultReservesUpdateChanLen = 256
 
 func (ch *ReservesUpdateChan) Receive(ctx context.Context) (<-chan channels.ReservesUpdate, error) {
 	if helpers.IsCanceled(ctx) {
 		return nil, errors.New("context is canceled")
 	}
 
-	subscription := make(chan channels.ReservesUpdate, DefaultSwapEventChannelLen)
+	subscription := make(chan channels.ReservesUpdate, DefaultReservesUpdateChanLen)
 
 	ch.subscribers = append(ch.subscribers, subscription)
 
