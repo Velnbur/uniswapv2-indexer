@@ -2,17 +2,17 @@ package contracts
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/go-redis/redis/v8"
 	"github.com/pkg/errors"
 	"gitlab.com/distributed_lab/logan/v3"
 
 	uniswapv2factory "github.com/Velnbur/uniswapv2-indexer/contracts/uniswapv2-factory"
+	"github.com/Velnbur/uniswapv2-indexer/internal/contracts/providers"
+	"github.com/Velnbur/uniswapv2-indexer/pkg/helpers"
 )
 
 type UniswapV2Factory struct {
@@ -20,14 +20,17 @@ type UniswapV2Factory struct {
 	contract *uniswapv2factory.UniswapV2Factory
 
 	client *ethclient.Client
-	redis  *redis.Client
 	logger *logan.Entry
+
+	provider     providers.UniswapV2FactoryProvider
+	pairProvider providers.UniswapV2PairProvider
 }
 
 // NewUniswapV2Factory creates a new UniswapV2Factory instance
 func NewUniswapV2Factory(
-	address common.Address, client *ethclient.Client, redis *redis.Client,
-	logger *logan.Entry,
+	address common.Address, client *ethclient.Client, logger *logan.Entry,
+	provider providers.UniswapV2FactoryProvider,
+	pairProvider providers.UniswapV2PairProvider,
 ) (*UniswapV2Factory, error) {
 	contract, err := uniswapv2factory.NewUniswapV2Factory(address, client)
 	if err != nil {
@@ -37,13 +40,14 @@ func NewUniswapV2Factory(
 		address:  address,
 		client:   client,
 		contract: contract,
-		redis:    redis,
+		provider: provider,
 		logger:   logger,
 	}, nil
 }
 
 // AllPairLength returns the number of all pairs
 func (u *UniswapV2Factory) AllPairLength(ctx context.Context) (uint64, error) {
+	// TODO: may be cache this too
 	length, err := u.contract.AllPairsLength(&bind.CallOpts{
 		Context: ctx,
 	})
@@ -55,19 +59,13 @@ func (u *UniswapV2Factory) AllPairLength(ctx context.Context) (uint64, error) {
 
 // AllPairs return pair by index
 func (u *UniswapV2Factory) AllPairs(ctx context.Context, index uint64) (*UniswapV2Pair, error) {
-	// first check redis
-	key := fmt.Sprintf("uniswapv2-factory:%s:all-pairs:%d", u.address.Hex(), index)
-	pairAddressStr, err := u.redis.Get(ctx, key).Result()
-	switch err {
-	case nil:
-		return NewUniswapV2Pair(
-			common.HexToAddress(pairAddressStr),
-			u.client, u.redis, u.logger,
-		)
-	case redis.Nil:
-		// do nothing
-	default:
-		u.logger.WithError(err).Error("failed to get pair address from redis")
+	// first check cache
+	pair, err := u.provider.GetPairByIndex(ctx, u.address, index)
+	if err != nil {
+		u.logger.WithError(err).Error("failed to get pair from cache")
+	}
+	if !helpers.IsAddressZero(pair) {
+		return NewUniswapV2Pair(pair, u.client, u.logger, u.pairProvider)
 	}
 
 	// then check ethereum
@@ -78,11 +76,11 @@ func (u *UniswapV2Factory) AllPairs(ctx context.Context, index uint64) (*Uniswap
 		return nil, errors.Wrap(err, "failed to get pair address")
 	}
 
-	// save to redis
-	err = u.redis.Set(ctx, key, pairAddress.Hex(), 0).Err()
+	// save to cache
+	err = u.provider.SetPairByIndex(ctx, u.address, pairAddress, index)
 	if err != nil {
-		u.logger.WithError(err).Error("failed to save pair address to redis")
+		u.logger.WithError(err).Error("failed to set pair to cache")
 	}
 
-	return NewUniswapV2Pair(pairAddress, u.client, u.redis, u.logger)
+	return NewUniswapV2Pair(pairAddress, u.client, u.logger, u.pairProvider)
 }

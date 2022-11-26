@@ -3,8 +3,10 @@ package contracts
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/go-redis/redis/v8"
+	"github.com/pkg/errors"
 	"gitlab.com/distributed_lab/logan/v3"
+
+	"github.com/Velnbur/uniswapv2-indexer/internal/providers"
 )
 
 type UniswapV2 struct {
@@ -13,12 +15,16 @@ type UniswapV2 struct {
 }
 
 func NewUniswapV2(
-	factoryAddr common.Address, client *ethclient.Client, redis *redis.Client,
-	logger *logan.Entry,
+	factoryAddr common.Address, client *ethclient.Client, logger *logan.Entry,
+	factoryProvider providers.UniswapV2FactoryProvider,
+	pairProvider providers.UniswapV2PairProvider,
 ) (*UniswapV2, error) {
-	factory, err := NewUniswapV2Factory(factoryAddr, client, redis, logger)
+	factory, err := NewUniswapV2Factory(
+		factoryAddr, client, logger,
+		factoryProvider, pairProvider,
+	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to create UniswapV2Factory")
 	}
 	return &UniswapV2{
 		Factory: factory,
