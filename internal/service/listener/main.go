@@ -16,8 +16,8 @@ import (
 	uniswapv2pair "github.com/Velnbur/uniswapv2-indexer/contracts/uniswapv2-pair"
 	"github.com/Velnbur/uniswapv2-indexer/internal/config"
 	"github.com/Velnbur/uniswapv2-indexer/internal/contracts"
-	"github.com/Velnbur/uniswapv2-indexer/internal/service/listener/provider"
-	"github.com/Velnbur/uniswapv2-indexer/internal/service/listener/provider/redis"
+	"github.com/Velnbur/uniswapv2-indexer/internal/providers"
+	"github.com/Velnbur/uniswapv2-indexer/internal/providers/redis"
 )
 
 type Listener struct {
@@ -29,7 +29,7 @@ type Listener struct {
 
 	swapEvents chan *uniswapv2pair.UniswapV2PairSwap
 
-	currentBlock provider.CurrentBlockProvider
+	currentBlock providers.CurrentBlockProvider
 }
 
 func NewListener(cfg config.Config) (*Listener, error) {

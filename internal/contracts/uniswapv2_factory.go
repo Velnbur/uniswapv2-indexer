@@ -11,7 +11,7 @@ import (
 	"gitlab.com/distributed_lab/logan/v3"
 
 	uniswapv2factory "github.com/Velnbur/uniswapv2-indexer/contracts/uniswapv2-factory"
-	"github.com/Velnbur/uniswapv2-indexer/internal/contracts/providers"
+	"github.com/Velnbur/uniswapv2-indexer/internal/providers"
 	"github.com/Velnbur/uniswapv2-indexer/pkg/helpers"
 )
 
