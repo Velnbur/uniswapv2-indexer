@@ -1,33 +1,26 @@
 package redis
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/Velnbur/uniswapv2-indexer/internal/providers"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-redis/redis/v8"
 )
 
+var _ providers.UniswapV2FactoryProvider = &UniswapV2FactoryProvider{}
+
 type UniswapV2FactoryProvider struct {
-	address common.Address
-
 	redis *redis.Client
-}
-
-func NewUniswapV2FactoryProvider(
-	address common.Address, redis *redis.Client,
-) *UniswapV2FactoryProvider {
-	return &UniswapV2FactoryProvider{
-		address: address,
-		redis:   redis,
-	}
 }
 
 const uniswapV2FactoryPairKey = "uniswapV2:factory:%s:pair:%d"
 
-func (p *UniswapV2FactoryProvider) GetPair(
-	index uint64,
+func (p *UniswapV2FactoryProvider) GetPairByIndex(
+	ctx context.Context, factory common.Address, index uint64,
 ) (common.Address, error) {
-	key := fmt.Sprintf(uniswapV2FactoryPairKey, p.address.Hex(), index)
+	key := fmt.Sprintf(uniswapV2FactoryPairKey, factory.Hex(), index)
 
 	var value string
 	err := p.redis.Get(p.redis.Context(), key).Scan(&value)
@@ -42,10 +35,14 @@ func (p *UniswapV2FactoryProvider) GetPair(
 	}
 }
 
-func (p *UniswapV2FactoryProvider) SetPair(
-	index uint64, value common.Address,
-) error {
-	key := fmt.Sprintf(uniswapV2FactoryPairKey, p.address.Hex(), index)
+func (p *UniswapV2FactoryProvider) SetPairByIndex(ctx context.Context, factory, pair common.Address, index uint64) error {
+	key := fmt.Sprintf(uniswapV2FactoryPairKey, factory.Hex(), index)
 
-	return p.redis.Set(p.redis.Context(), key, value.Hex(), 0).Err()
+	return p.redis.Set(p.redis.Context(), key, pair.Hex(), 0).Err()
+}
+
+func NewUniswapV2FactoryProvider(redis *redis.Client) *UniswapV2FactoryProvider {
+	return &UniswapV2FactoryProvider{
+		redis: redis,
+	}
 }

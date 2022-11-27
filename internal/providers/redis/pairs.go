@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/Velnbur/uniswapv2-indexer/internal/providers"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-redis/redis/v8"
 	"github.com/pkg/errors"
 )
+
+var _ providers.UniswapV2FactoryProvider = &UniswapV2FactoryProvider{}
 
 type UniswapV2PairsProvider struct {
 	redis *redis.Client

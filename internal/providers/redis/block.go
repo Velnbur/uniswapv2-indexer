@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/go-redis/redis/v8"
+	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
 type BlockProvider struct {
@@ -25,10 +26,15 @@ const currentBlockKey = "current_block"
 func (p *BlockProvider) CurrentBlock(ctx context.Context) (uint64, error) {
 	if p.block == 0 {
 		block, err := p.redis.Get(ctx, currentBlockKey).Uint64()
-		if err != nil {
-			return 0, err
+		switch err {
+		case nil:
+			p.block = block
+			return block, nil
+		case redis.Nil:
+			return 0, nil
+		default:
+			return 0, errors.Wrap(err, "failed to get current block")
 		}
-		p.block = block
 	}
 
 	return p.block, nil
@@ -36,6 +42,9 @@ func (p *BlockProvider) CurrentBlock(ctx context.Context) (uint64, error) {
 
 // UpdateBlock updates the current block.
 func (p *BlockProvider) UpdateBlock(ctx context.Context, block uint64) error {
-	p.block = block
-	return p.redis.Set(ctx, currentBlockKey, block, 0).Err()
+	if p.block != block {
+		p.block = block
+		return p.redis.Set(ctx, currentBlockKey, block, 0).Err()
+	}
+	return nil
 }

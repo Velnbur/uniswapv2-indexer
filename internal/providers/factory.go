@@ -8,5 +8,5 @@ import (
 
 type UniswapV2FactoryProvider interface {
 	GetPairByIndex(ctx context.Context, factory common.Address, index uint64) (common.Address, error)
-	SetPairByIndex(ctx context.Context, pair, factory common.Address, index uint64) error
+	SetPairByIndex(ctx context.Context, factory, pair common.Address, index uint64) error
 }
