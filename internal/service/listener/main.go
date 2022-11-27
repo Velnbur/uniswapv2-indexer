@@ -14,6 +14,8 @@ import (
 	"gitlab.com/distributed_lab/logan/v3"
 
 	uniswapv2pair "github.com/Velnbur/uniswapv2-indexer/contracts/uniswapv2-pair"
+	"github.com/Velnbur/uniswapv2-indexer/internal/channels"
+	"github.com/Velnbur/uniswapv2-indexer/internal/channels/inmemory"
 	"github.com/Velnbur/uniswapv2-indexer/internal/config"
 	"github.com/Velnbur/uniswapv2-indexer/internal/contracts"
 	"github.com/Velnbur/uniswapv2-indexer/internal/providers"
@@ -27,9 +29,9 @@ type Listener struct {
 
 	uniswapV2 *contracts.UniswapV2
 
-	swapEvents chan *uniswapv2pair.UniswapV2PairSwap
-
 	currentBlock providers.CurrentBlockProvider
+
+	events channels.ReservesUpdateQueue
 }
 
 func NewListener(cfg config.Config) (*Listener, error) {
@@ -45,7 +47,7 @@ func NewListener(cfg config.Config) (*Listener, error) {
 		logger:       cfg.Log().WithField("service", "listener"),
 		pairABI:      pairABI,
 		currentBlock: redis.NewBlockProvider(cfg.Redis()),
-		swapEvents:   make(chan *uniswapv2pair.UniswapV2PairSwap),
+		events:       inmemory.NewSwapEventChan(),
 	}, nil
 }
 
@@ -135,17 +137,19 @@ func (l *Listener) handleEvent(ctx context.Context, log types.Log) error {
 
 	switch log.Topics[0] {
 	case l.pairABI.Events["Swap"].ID:
-		return l.handleSwap(log)
+		return l.handleSwap(ctx, log)
 	case l.pairABI.Events["Sync"].ID:
-		return l.handleSync(log)
+		return l.handleSync(ctx, log)
 	case l.pairABI.Events["Mint"].ID:
-		return l.handleMint(log)
+		return l.handleMint(ctx, log)
+	case l.pairABI.Events["Burn"].ID:
+		return nil
 	default:
 		return nil
 	}
 }
 
-func (l *Listener) handleSwap(log types.Log) error {
+func (l *Listener) handleSwap(ctx context.Context, log types.Log) error {
 	var event uniswapv2pair.UniswapV2PairSwap
 	err := l.pairABI.UnpackIntoInterface(&event, "Swap", log.Data)
 	if err != nil {
@@ -160,11 +164,15 @@ func (l *Listener) handleSwap(log types.Log) error {
 		"to":         event.To.Hex(),
 	}).Debug("received log")
 
-	l.swapEvents <- &event
-	return nil
+	err = l.events.Send(ctx, channels.ReservesUpdate{
+		Address:       event.Raw.Address,
+		Reserve0Delta: &big.Int{},
+		Reserve1Delta: &big.Int{},
+	})
+	return errors.Wrap(err, "failed to add event to queue")
 }
 
-func (l *Listener) handleSync(log types.Log) error {
+func (l *Listener) handleSync(ctx context.Context, log types.Log) error {
 	var event uniswapv2pair.UniswapV2PairSync
 	err := l.pairABI.UnpackIntoInterface(&event, "Sync", log.Data)
 	if err != nil {
@@ -175,10 +183,16 @@ func (l *Listener) handleSync(log types.Log) error {
 		"reserve1": event.Reserve1.String(),
 	}).Debug("received log")
 
-	return nil
+	err = l.events.Send(ctx, channels.ReservesUpdate{
+		Address:       event.Raw.Address,
+		Reserve0Delta: event.Reserve0,
+		Reserve1Delta: event.Reserve1,
+	})
+
+	return errors.Wrap(err, "failed to add event to queue")
 }
 
-func (l *Listener) handleMint(log types.Log) error {
+func (l *Listener) handleMint(ctx context.Context, log types.Log) error {
 	var event uniswapv2pair.UniswapV2PairMint
 	err := l.pairABI.UnpackIntoInterface(&event, "Mint", log.Data)
 	if err != nil {
@@ -190,5 +204,33 @@ func (l *Listener) handleMint(log types.Log) error {
 		"amount1": event.Amount1.String(),
 	}).Debug("received log")
 
-	return nil
+	err = l.events.Send(ctx, channels.ReservesUpdate{
+		Address:       event.Raw.Address,
+		Reserve0Delta: event.Amount0,
+		Reserve1Delta: event.Amount1,
+	})
+
+	return errors.Wrap(err, "failed to add event to queue")
+}
+
+func (l *Listener) handleBurn(ctx context.Context, log types.Log) error {
+	var event uniswapv2pair.UniswapV2PairBurn
+	err := l.pairABI.UnpackIntoInterface(&event, "Burn", log.Data)
+	if err != nil {
+		return errors.Wrap(err, "failed to unpack Mint event")
+	}
+	l.logger.WithFields(logan.F{
+		"sender":  event.Sender.Hex(),
+		"amount0": event.Amount0.String(),
+		"amount1": event.Amount1.String(),
+		"to":      event.To.Hex(),
+	}).Debug("received log")
+
+	err = l.events.Send(ctx, channels.ReservesUpdate{
+		Address:       event.Raw.Address,
+		Reserve0Delta: event.Amount0,
+		Reserve1Delta: event.Amount1,
+	})
+
+	return errors.Wrap(err, "failed to add event to queue")
 }
