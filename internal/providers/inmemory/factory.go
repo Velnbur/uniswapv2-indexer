@@ -19,6 +19,12 @@ type UniswapV2FactoryProvider struct {
 	pairs map[uniswapV2Pairkey]common.Address
 }
 
+func NewUniswapV2FactoryProvider() *UniswapV2FactoryProvider {
+	return &UniswapV2FactoryProvider{
+		pairs: make(map[uniswapV2Pairkey]common.Address),
+	}
+}
+
 // GetPairByIndex implements providers.UniswapV2FactoryProvider
 func (p *UniswapV2FactoryProvider) GetPairByIndex(
 	ctx context.Context, factory common.Address, index uint64,
