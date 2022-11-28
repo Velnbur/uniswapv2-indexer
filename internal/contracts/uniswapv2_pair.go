@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"gitlab.com/distributed_lab/logan/v3"
 
-	uniswapv2pair "github.com/Velnbur/uniswapv2-indexer/contracts/uniswapv2-pair"
+	uniswapv2pair "github.com/Velnbur/uniswapv2-indexer/generated/uniswapv2-pair"
 	"github.com/Velnbur/uniswapv2-indexer/internal/providers"
 	"github.com/Velnbur/uniswapv2-indexer/pkg/helpers"
 )
