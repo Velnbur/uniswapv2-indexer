@@ -37,11 +37,12 @@ func NewUniswapV2Factory(
 		return nil, err
 	}
 	return &UniswapV2Factory{
-		address:  address,
-		client:   client,
-		contract: contract,
-		provider: provider,
-		logger:   logger,
+		address:      address,
+		client:       client,
+		contract:     contract,
+		provider:     provider,
+		pairProvider: pairProvider,
+		logger:       logger,
 	}, nil
 }
 

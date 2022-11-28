@@ -98,8 +98,8 @@ func (u *UniswapV2Pair) Token1(ctx context.Context) (common.Address, error) {
 }
 
 func (u *UniswapV2Pair) initTokens(ctx context.Context) error {
-
 	// get from cache first
+
 	token0, token1, err := u.provider.GetTokens(ctx, u.Address)
 	if err != nil {
 		u.logger.WithError(err).Error("failed to get tokens from provider")
