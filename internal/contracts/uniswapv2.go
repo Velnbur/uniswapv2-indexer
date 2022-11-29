@@ -18,10 +18,11 @@ func NewUniswapV2(
 	factoryAddr common.Address, client *ethclient.Client, logger *logan.Entry,
 	factoryProvider providers.UniswapV2FactoryProvider,
 	pairProvider providers.UniswapV2PairProvider,
+	erc20 providers.Erc20Provider,
 ) (*UniswapV2, error) {
 	factory, err := NewUniswapV2Factory(
 		factoryAddr, client, logger,
-		factoryProvider, pairProvider,
+		factoryProvider, pairProvider, erc20,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create UniswapV2Factory")

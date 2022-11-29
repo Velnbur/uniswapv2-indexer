@@ -80,6 +80,6 @@ func (p *UniswapV2PairProvider) SetTokens(
 	pairValue.Token0 = token0
 	pairValue.Token1 = token1
 
-	p.pairs[pair] = pairValue
+	p.cache.Store(pair, pairValue)
 	return nil
 }

@@ -25,13 +25,16 @@ type UniswapV2Pair struct {
 	Address  common.Address
 	contract *uniswapv2pair.UniswapV2Pair
 
-	provider providers.UniswapV2PairProvider
-	logger   *logan.Entry
+	provider      providers.UniswapV2PairProvider
+	erc20Provider providers.Erc20Provider
+	logger        *logan.Entry
+
+	client *ethclient.Client
 }
 
 func NewUniswapV2Pair(
 	address common.Address, client *ethclient.Client, logger *logan.Entry,
-	provider providers.UniswapV2PairProvider,
+	provider providers.UniswapV2PairProvider, erc20Provider providers.Erc20Provider,
 ) (*UniswapV2Pair, error) {
 	contract, err := uniswapv2pair.NewUniswapV2Pair(address, client)
 	if err != nil {
@@ -39,10 +42,12 @@ func NewUniswapV2Pair(
 	}
 
 	return &UniswapV2Pair{
-		Address:  address,
-		contract: contract,
-		provider: provider,
-		logger:   logger,
+		Address:       address,
+		contract:      contract,
+		provider:      provider,
+		logger:        logger,
+		client:        client,
+		erc20Provider: erc20Provider,
 	}, nil
 }
 
@@ -77,24 +82,30 @@ func (u *UniswapV2Pair) GetReserves(ctx context.Context) (*big.Int, *big.Int, er
 	return u.reserve0, u.reserve1, nil
 }
 
-func (u *UniswapV2Pair) Token0(ctx context.Context) (common.Address, error) {
+func (u *UniswapV2Pair) Token0(ctx context.Context) (*ERC20, error) {
 	if !helpers.IsAddressZero(u.token0) {
-		return u.token0, nil
+		return NewERC20(u.token0, u.client, u.erc20Provider)
 	}
 
 	err := u.initTokens(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to init tokens")
+	}
 
-	return u.token0, err
+	return NewERC20(u.token0, u.client, u.erc20Provider)
 }
 
-func (u *UniswapV2Pair) Token1(ctx context.Context) (common.Address, error) {
+func (u *UniswapV2Pair) Token1(ctx context.Context) (*ERC20, error) {
 	if !helpers.IsAddressZero(u.token1) {
-		return u.token1, nil
+		return NewERC20(u.token0, u.client, u.erc20Provider)
 	}
 
 	err := u.initTokens(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to init tokens")
+	}
 
-	return u.token1, err
+	return NewERC20(u.token1, u.client, u.erc20Provider)
 }
 
 func (u *UniswapV2Pair) initTokens(ctx context.Context) error {

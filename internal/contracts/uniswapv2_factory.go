@@ -22,8 +22,9 @@ type UniswapV2Factory struct {
 	client *ethclient.Client
 	logger *logan.Entry
 
-	provider     providers.UniswapV2FactoryProvider
-	pairProvider providers.UniswapV2PairProvider
+	provider      providers.UniswapV2FactoryProvider
+	pairProvider  providers.UniswapV2PairProvider
+	erc20Provider providers.Erc20Provider
 }
 
 // NewUniswapV2Factory creates a new UniswapV2Factory instance
@@ -31,18 +32,20 @@ func NewUniswapV2Factory(
 	address common.Address, client *ethclient.Client, logger *logan.Entry,
 	provider providers.UniswapV2FactoryProvider,
 	pairProvider providers.UniswapV2PairProvider,
+	erc20Provider providers.Erc20Provider,
 ) (*UniswapV2Factory, error) {
 	contract, err := uniswapv2factory.NewUniswapV2Factory(address, client)
 	if err != nil {
 		return nil, err
 	}
 	return &UniswapV2Factory{
-		address:      address,
-		client:       client,
-		contract:     contract,
-		provider:     provider,
-		pairProvider: pairProvider,
-		logger:       logger,
+		address:       address,
+		client:        client,
+		contract:      contract,
+		provider:      provider,
+		pairProvider:  pairProvider,
+		logger:        logger,
+		erc20Provider: erc20Provider,
 	}, nil
 }
 
@@ -66,7 +69,7 @@ func (u *UniswapV2Factory) AllPairs(ctx context.Context, index uint64) (*Uniswap
 		u.logger.WithError(err).Error("failed to get pair from cache")
 	}
 	if !helpers.IsAddressZero(pair) {
-		return NewUniswapV2Pair(pair, u.client, u.logger, u.pairProvider)
+		return NewUniswapV2Pair(pair, u.client, u.logger, u.pairProvider, u.erc20Provider)
 	}
 
 	// then check ethereum
@@ -83,5 +86,5 @@ func (u *UniswapV2Factory) AllPairs(ctx context.Context, index uint64) (*Uniswap
 		u.logger.WithError(err).Error("failed to set pair to cache")
 	}
 
-	return NewUniswapV2Pair(pairAddress, u.client, u.logger, u.pairProvider)
+	return NewUniswapV2Pair(pairAddress, u.client, u.logger, u.pairProvider, u.erc20Provider)
 }
