@@ -2,9 +2,9 @@ package inmemory
 
 import (
 	"context"
+	"sync"
 
 	"github.com/Velnbur/uniswapv2-indexer/internal/providers"
-	"github.com/Velnbur/uniswapv2-indexer/pkg/helpers"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -16,40 +16,29 @@ type uniswapV2Pairkey struct {
 }
 
 type UniswapV2FactoryProvider struct {
-	pairs map[uniswapV2Pairkey]common.Address
+	cache sync.Map
 }
 
 func NewUniswapV2FactoryProvider() *UniswapV2FactoryProvider {
-	return &UniswapV2FactoryProvider{
-		pairs: make(map[uniswapV2Pairkey]common.Address),
-	}
+	return &UniswapV2FactoryProvider{}
 }
 
 // GetPairByIndex implements providers.UniswapV2FactoryProvider
 func (p *UniswapV2FactoryProvider) GetPairByIndex(
 	ctx context.Context, factory common.Address, index uint64,
 ) (common.Address, error) {
-	if helpers.IsCanceled(ctx) {
-		return common.Address{}, ctx.Err()
-	}
-
-	pair, ok := p.pairs[uniswapV2Pairkey{factory: factory, index: index}]
+	res, ok := p.cache.Load(uniswapV2Pairkey{factory: factory, index: index})
 	if !ok {
 		return common.Address{}, nil
 	}
 
-	return pair, nil
+	return res.(common.Address), nil
 }
 
 // SetPairByIndex implements providers.UniswapV2FactoryProvider
 func (p *UniswapV2FactoryProvider) SetPairByIndex(
 	ctx context.Context, factory, pair common.Address, index uint64,
 ) error {
-	if helpers.IsCanceled(ctx) {
-		return ctx.Err()
-	}
-
-	p.pairs[uniswapV2Pairkey{factory: factory, index: index}] = pair
-
+	p.cache.Store(uniswapV2Pairkey{factory: factory, index: index}, pair)
 	return nil
 }
