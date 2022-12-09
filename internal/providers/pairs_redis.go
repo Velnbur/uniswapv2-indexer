@@ -1,4 +1,4 @@
-package redis
+package providers
 
 import (
 	"context"
@@ -6,20 +6,19 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/Velnbur/uniswapv2-indexer/internal/providers"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-redis/redis/v8"
 	"github.com/pkg/errors"
 )
 
-var _ providers.UniswapV2FactoryProvider = &UniswapV2FactoryProvider{}
+var _ UniswapV2PairProvider = &UniswapV2PairsRedisProvider{}
 
-type UniswapV2PairsProvider struct {
+type UniswapV2PairsRedisProvider struct {
 	redis *redis.Client
 }
 
-func NewUniswapV2PairsProvider(redis *redis.Client) *UniswapV2PairsProvider {
-	return &UniswapV2PairsProvider{
+func NewUniswapV2PairsRedisProvider(redis *redis.Client) *UniswapV2PairsRedisProvider {
+	return &UniswapV2PairsRedisProvider{
 		redis: redis,
 	}
 }
@@ -31,7 +30,7 @@ type tokens struct {
 	Token1 common.Address `json:"token1"`
 }
 
-func (p *UniswapV2PairsProvider) GetTokens(
+func (p *UniswapV2PairsRedisProvider) GetTokens(
 	ctx context.Context, pair common.Address,
 ) (common.Address, common.Address, error) {
 	key := fmt.Sprintf(uniswapV2TokensKey, pair.Hex())
@@ -57,7 +56,7 @@ func (p *UniswapV2PairsProvider) GetTokens(
 	}
 }
 
-func (p *UniswapV2PairsProvider) SetTokens(
+func (p *UniswapV2PairsRedisProvider) SetTokens(
 	ctx context.Context, pair, token0, token1 common.Address,
 ) error {
 	key := fmt.Sprintf(uniswapV2TokensKey, pair.Hex())
@@ -82,7 +81,7 @@ type reserves struct {
 
 const uniswapV2ReservesKey = "uniswapv2-pair:%s:reserves"
 
-func (p *UniswapV2PairsProvider) GetReserves(
+func (p *UniswapV2PairsRedisProvider) GetReserves(
 	ctx context.Context, pair common.Address,
 ) (*big.Int, *big.Int, error) {
 	key := fmt.Sprintf(uniswapV2ReservesKey, pair.Hex())
@@ -104,7 +103,7 @@ func (p *UniswapV2PairsProvider) GetReserves(
 	}
 }
 
-func (p *UniswapV2PairsProvider) SetReserves(
+func (p *UniswapV2PairsRedisProvider) SetReserves(
 	ctx context.Context, pair common.Address,
 	reserve0, reserve1 *big.Int,
 ) error {

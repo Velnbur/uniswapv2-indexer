@@ -14,7 +14,7 @@ import (
 	"gitlab.com/distributed_lab/logan/v3/errors"
 
 	"github.com/Velnbur/uniswapv2-indexer/internal/contracts"
-	"github.com/Velnbur/uniswapv2-indexer/internal/providers/inmemory"
+	"github.com/Velnbur/uniswapv2-indexer/internal/providers"
 	workerspool "github.com/Velnbur/uniswapv2-indexer/pkg/workers-pool"
 )
 
@@ -64,9 +64,9 @@ func main() {
 		log.WithError(err).Fatal("failed to connecto to ethereum node")
 	}
 
-	factoryProvider := inmemory.NewUniswapV2FactoryProvider()
-	pairsProvider := inmemory.NewUniswapV2PairProvider()
-	erc20Provider := inmemory.NewErc20Provider()
+	factoryProvider := providers.NewUniswapV2PairInMemoryProvider()
+	pairsProvider := providers.NewUniswapV2PairInMemoryProvider()
+	erc20Provider := providers.NewErc20InMemoryProvider()
 
 	factoryContract, err := contracts.NewUniswapV2Factory(
 		common.HexToAddress(*factory),

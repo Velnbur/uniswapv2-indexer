@@ -1,30 +1,29 @@
-package inmemory
+package providers
 
 import (
 	"context"
 	"math/big"
 	"sync"
 
-	"github.com/Velnbur/uniswapv2-indexer/internal/providers"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-var _ providers.UniswapV2PairProvider = &UniswapV2PairProvider{}
+var _ UniswapV2PairProvider = &UniswapV2PairInMemoryProvider{}
 
 type uniswapV2PairValue struct {
 	Token0, Token1       common.Address
 	Reserves0, Reserves1 *big.Int
 }
 
-type UniswapV2PairProvider struct {
+type UniswapV2PairInMemoryProvider struct {
 	cache sync.Map
 }
 
-func NewUniswapV2PairProvider() *UniswapV2PairProvider {
-	return &UniswapV2PairProvider{}
+func NewUniswapV2PairInMemoryProvider() *UniswapV2PairInMemoryProvider {
+	return &UniswapV2PairInMemoryProvider{}
 }
 
-func (p *UniswapV2PairProvider) GetReserves(
+func (p *UniswapV2PairInMemoryProvider) GetReserves(
 	_ context.Context, pair common.Address,
 ) (reserves0, reserves1 *big.Int, err error) {
 	res, ok := p.cache.Load(pair)
@@ -37,7 +36,7 @@ func (p *UniswapV2PairProvider) GetReserves(
 	return pairValue.Reserves0, pairValue.Reserves1, nil
 }
 
-func (p *UniswapV2PairProvider) GetTokens(
+func (p *UniswapV2PairInMemoryProvider) GetTokens(
 	_ context.Context, pair common.Address,
 ) (token0, token1 common.Address, err error) {
 	res, ok := p.cache.Load(pair)
@@ -51,7 +50,7 @@ func (p *UniswapV2PairProvider) GetTokens(
 }
 
 // SetReserves implements providers.UniswapV2PairProvider
-func (p *UniswapV2PairProvider) SetReserves(
+func (p *UniswapV2PairInMemoryProvider) SetReserves(
 	_ context.Context, pair common.Address, reserve0, reserve1 *big.Int,
 ) error {
 	res, ok := p.cache.Load(pair)
@@ -68,7 +67,7 @@ func (p *UniswapV2PairProvider) SetReserves(
 }
 
 // SetTokens implements providers.UniswapV2PairProvider
-func (p *UniswapV2PairProvider) SetTokens(
+func (p *UniswapV2PairInMemoryProvider) SetTokens(
 	_ context.Context, pair common.Address, token0, token1 common.Address,
 ) error {
 	res, ok := p.cache.Load(pair)

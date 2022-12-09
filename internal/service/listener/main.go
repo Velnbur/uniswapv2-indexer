@@ -19,7 +19,6 @@ import (
 	"github.com/Velnbur/uniswapv2-indexer/internal/config"
 	"github.com/Velnbur/uniswapv2-indexer/internal/contracts"
 	"github.com/Velnbur/uniswapv2-indexer/internal/providers"
-	"github.com/Velnbur/uniswapv2-indexer/internal/providers/redis"
 )
 
 type Listener struct {
@@ -46,7 +45,7 @@ func NewListener(cfg config.Config) (*Listener, error) {
 		client:       cfg.EthereumClient(),
 		logger:       cfg.Log().WithField("service", "listener"),
 		pairABI:      pairABI,
-		currentBlock: redis.NewBlockProvider(cfg.Redis()),
+		currentBlock: providers.NewBlockProvider(cfg.Redis()),
 		events:       inmemory.NewSwapEventChan(),
 	}, nil
 }
