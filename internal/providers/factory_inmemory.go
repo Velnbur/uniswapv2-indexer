@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"strconv"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -40,7 +41,7 @@ func (p *UniswapV2FactoryInMemoryProvider) GetPairByIndex(
 func (p *UniswapV2FactoryInMemoryProvider) SetPairByIndex(
 	ctx context.Context, factory, pair common.Address, index uint64,
 ) error {
-	key := factory.String() + ":" + string(index)
+	key := factory.String() + ":" + strconv.FormatUint(index, 10)
 	p.cache.Store(key, pair)
 	return nil
 }

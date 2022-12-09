@@ -14,7 +14,6 @@ import (
 	"gitlab.com/distributed_lab/logan/v3/errors"
 
 	"github.com/Velnbur/uniswapv2-indexer/internal/contracts"
-	"github.com/Velnbur/uniswapv2-indexer/internal/providers"
 	workerspool "github.com/Velnbur/uniswapv2-indexer/pkg/workers-pool"
 )
 
@@ -64,16 +63,12 @@ func main() {
 		log.WithError(err).Fatal("failed to connecto to ethereum node")
 	}
 
-	factoryProvider := providers.NewUniswapV2PairInMemoryProvider()
-	pairsProvider := providers.NewUniswapV2PairInMemoryProvider()
-	erc20Provider := providers.NewErc20InMemoryProvider()
-
 	factoryContract, err := contracts.NewUniswapV2Factory(
-		common.HexToAddress(*factory),
-		client, log,
-		factoryProvider,
-		pairsProvider,
-		erc20Provider,
+		contracts.UniswapV2FactoryConfig{
+			Address: common.HexToAddress(*factory),
+			Client:  client,
+			Logger:  log,
+		},
 	)
 	if err != nil {
 		log.WithError(err).Fatal("failed to create factory contract")
@@ -94,7 +89,7 @@ func main() {
 		log.WithError(err).Fatal("failed to get amount of pairs")
 	}
 
-	wp := workerspool.NewWorkingPool(50, int64(amount))
+	wp := workerspool.NewWorkingPool(16, int64(amount))
 
 	for i := 0; i < int(amount); i++ {
 		i := i

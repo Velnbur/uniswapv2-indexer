@@ -15,6 +15,16 @@ import (
 	"github.com/Velnbur/uniswapv2-indexer/pkg/helpers"
 )
 
+type UniswapV2FactoryConfig struct {
+	Address common.Address
+	Client  *ethclient.Client
+	Logger  *logan.Entry
+
+	Provider      providers.UniswapV2FactoryProvider
+	PairProvider  providers.UniswapV2PairProvider
+	Erc20Provider providers.Erc20Provider
+}
+
 type UniswapV2Factory struct {
 	address  common.Address
 	contract *uniswapv2factory.UniswapV2Factory
@@ -28,24 +38,21 @@ type UniswapV2Factory struct {
 }
 
 // NewUniswapV2Factory creates a new UniswapV2Factory instance
-func NewUniswapV2Factory(
-	address common.Address, client *ethclient.Client, logger *logan.Entry,
-	provider providers.UniswapV2FactoryProvider,
-	pairProvider providers.UniswapV2PairProvider,
-	erc20Provider providers.Erc20Provider,
-) (*UniswapV2Factory, error) {
-	contract, err := uniswapv2factory.NewUniswapV2Factory(address, client)
+func NewUniswapV2Factory(cfg UniswapV2FactoryConfig) (*UniswapV2Factory, error) {
+	contract, err := uniswapv2factory.NewUniswapV2Factory(
+		cfg.Address, cfg.Client,
+	)
 	if err != nil {
 		return nil, err
 	}
 	return &UniswapV2Factory{
-		address:       address,
-		client:        client,
+		address:       cfg.Address,
+		client:        cfg.Client,
 		contract:      contract,
-		provider:      provider,
-		pairProvider:  pairProvider,
-		logger:        logger,
-		erc20Provider: erc20Provider,
+		provider:      cfg.Provider,
+		pairProvider:  cfg.PairProvider,
+		logger:        cfg.Logger,
+		erc20Provider: cfg.Erc20Provider,
 	}, nil
 }
 
@@ -62,14 +69,26 @@ func (u *UniswapV2Factory) AllPairLength(ctx context.Context) (uint64, error) {
 }
 
 // AllPairs return pair by index
-func (u *UniswapV2Factory) AllPairs(ctx context.Context, index uint64) (*UniswapV2Pair, error) {
+func (u *UniswapV2Factory) AllPairs(
+	ctx context.Context, index uint64,
+) (*UniswapV2Pair, error) {
 	// first check cache
-	pair, err := u.provider.GetPairByIndex(ctx, u.address, index)
-	if err != nil {
-		u.logger.WithError(err).Error("failed to get pair from cache")
-	}
-	if !helpers.IsAddressZero(pair) {
-		return NewUniswapV2Pair(pair, u.client, u.logger, u.pairProvider, u.erc20Provider)
+	if u.provider != nil {
+		pair, err := u.provider.GetPairByIndex(ctx, u.address, index)
+		if err != nil {
+			u.logger.WithError(err).Error("failed to get pair from cache")
+		}
+		if !helpers.IsAddressZero(pair) {
+			return NewUniswapV2Pair(
+				UniswapV2PairConfig{
+					Address:       pair,
+					Client:        u.client,
+					Logger:        u.logger,
+					Provider:      u.pairProvider,
+					Erc20Provider: u.erc20Provider,
+				},
+			)
+		}
 	}
 
 	// then check ethereum
@@ -81,10 +100,20 @@ func (u *UniswapV2Factory) AllPairs(ctx context.Context, index uint64) (*Uniswap
 	}
 
 	// save to cache
-	err = u.provider.SetPairByIndex(ctx, u.address, pairAddress, index)
-	if err != nil {
-		u.logger.WithError(err).Error("failed to set pair to cache")
+	if u.provider != nil {
+		err = u.provider.SetPairByIndex(ctx, u.address, pairAddress, index)
+		if err != nil {
+			u.logger.WithError(err).Error("failed to set pair to cache")
+		}
 	}
 
-	return NewUniswapV2Pair(pairAddress, u.client, u.logger, u.pairProvider, u.erc20Provider)
+	return NewUniswapV2Pair(
+		UniswapV2PairConfig{
+			Address:       pairAddress,
+			Client:        u.client,
+			Logger:        u.logger,
+			Provider:      u.pairProvider,
+			Erc20Provider: u.erc20Provider,
+		},
+	)
 }

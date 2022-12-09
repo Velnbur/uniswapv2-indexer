@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-redis/redis/v8"
@@ -72,53 +71,4 @@ func (p *UniswapV2PairsRedisProvider) SetTokens(
 	}
 
 	return p.redis.Set(ctx, key, tokensStr, 0).Err()
-}
-
-type reserves struct {
-	Reserve0 *big.Int `json:"reserve0"`
-	Reserve1 *big.Int `json:"reserve1"`
-}
-
-const uniswapV2ReservesKey = "uniswapv2-pair:%s:reserves"
-
-func (p *UniswapV2PairsRedisProvider) GetReserves(
-	ctx context.Context, pair common.Address,
-) (*big.Int, *big.Int, error) {
-	key := fmt.Sprintf(uniswapV2ReservesKey, pair.Hex())
-
-	reservesStr, err := p.redis.Get(ctx, key).Result()
-
-	switch err {
-	case nil:
-		var reserves reserves
-		err = json.Unmarshal([]byte(reservesStr), &reserves)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed to unmarshal reserves")
-		}
-		return reserves.Reserve0, reserves.Reserve1, nil
-	case redis.Nil:
-		return nil, nil, nil
-	default:
-		return nil, nil, errors.Wrap(err, "failed to get reserves from redis")
-	}
-}
-
-func (p *UniswapV2PairsRedisProvider) SetReserves(
-	ctx context.Context, pair common.Address,
-	reserve0, reserve1 *big.Int,
-) error {
-	key := fmt.Sprintf(uniswapV2ReservesKey, pair.Hex())
-
-	reserves := reserves{
-		Reserve0: reserve0,
-		Reserve1: reserve1,
-	}
-
-	reservesStr, err := json.Marshal(reserves)
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal reserves")
-	}
-
-	// TODO: set expiration
-	return p.redis.Set(ctx, key, reservesStr, 0).Err()
 }

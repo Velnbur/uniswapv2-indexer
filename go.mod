@@ -31,7 +31,6 @@ require (
 	github.com/getsentry/sentry-go v0.7.0 // indirect
 	github.com/go-ole/go-ole v1.2.1 // indirect
 	github.com/go-ozzo/ozzo-validation/v4 v4.2.1 // indirect
-	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/google/jsonapi v0.0.0-20200226002910-c8283f632fb7 // indirect
 	github.com/google/uuid v1.2.0 // indirect
