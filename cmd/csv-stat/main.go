@@ -142,10 +142,10 @@ func main() {
 				defer mx.Unlock()
 				err = writer.Write([]string{
 					pair.Address.String(),
-					token0.Address().String(),
+					token0.Address().Hex(),
 					symbol0,
 					reserve0.String(),
-					token1.Address().String(),
+					token1.Address().Hex(),
 					symbol1,
 					reserve1.String(),
 				})

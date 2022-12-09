@@ -38,7 +38,7 @@ func (e *ERC20) Address() common.Address {
 	return e.address
 }
 
-func (e *ERC20) Symbol(ctx context.Context) ([]byte, error) {
+func (e *ERC20) Symbol(ctx context.Context) (string, error) {
 	if e.symbol != "" {
 		return e.symbol, nil
 	}
