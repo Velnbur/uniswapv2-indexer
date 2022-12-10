@@ -18,6 +18,7 @@ type EventHandler func(ctx context.Context, log *types.Log) error
 
 func (l *Listener) initHandlers(pairABI abi.ABI) {
 	l.eventHandlers = map[common.Hash]EventHandler{
+		// TODO:
 		pairABI.Events["Swap"].ID: l.handleSwap,
 		pairABI.Events["Sync"].ID: l.handleSync,
 		pairABI.Events["Burn"].ID: l.handleBurn,
@@ -48,10 +49,12 @@ func (l *Listener) handleEvent(ctx context.Context, log *types.Log) error {
 
 func (l *Listener) handleSwap(ctx context.Context, log *types.Log) error {
 	var event uniswapv2pair.UniswapV2PairSwap
-	err := l.pairABI.UnpackIntoInterface(&event, "Swap", log.Data)
+
+	err := l.eventUnpacker.Unpack(&event, SwapEvent, log.Data)
 	if err != nil {
-		return errors.Wrap(err, "failed to unpack Swap event")
+		return errors.Wrap(err, "failed to unpack log")
 	}
+
 	l.logger.WithFields(logan.F{
 		"sender":     event.Sender.Hex(),
 		"amount0In":  event.Amount0In.String(),
@@ -62,7 +65,8 @@ func (l *Listener) handleSwap(ctx context.Context, log *types.Log) error {
 	}).Debug("received log")
 
 	err = l.reservesUpdateEvents.Send(ctx, channels.ReservesUpdate{
-		Address:       event.Raw.Address,
+		Address: event.Raw.Address,
+		// FIXME:
 		Reserve0Delta: &big.Int{},
 		Reserve1Delta: &big.Int{},
 	})
@@ -71,10 +75,12 @@ func (l *Listener) handleSwap(ctx context.Context, log *types.Log) error {
 
 func (l *Listener) handleSync(ctx context.Context, log *types.Log) error {
 	var event uniswapv2pair.UniswapV2PairSync
-	err := l.pairABI.UnpackIntoInterface(&event, "Sync", log.Data)
+
+	err := l.eventUnpacker.Unpack(&event, SyncEvent, log.Data)
 	if err != nil {
-		return errors.Wrap(err, "failed to unpack Sync event")
+		return errors.Wrap(err, "failed to unpack log")
 	}
+
 	l.logger.WithFields(logan.F{
 		"reserve0": event.Reserve0.String(),
 		"reserve1": event.Reserve1.String(),
@@ -91,10 +97,12 @@ func (l *Listener) handleSync(ctx context.Context, log *types.Log) error {
 
 func (l *Listener) handleMint(ctx context.Context, log *types.Log) error {
 	var event uniswapv2pair.UniswapV2PairMint
-	err := l.pairABI.UnpackIntoInterface(&event, "Mint", log.Data)
+
+	err := l.eventUnpacker.Unpack(&event, MintEvent, log.Data)
 	if err != nil {
-		return errors.Wrap(err, "failed to unpack Mint event")
+		return errors.Wrap(err, "failed to unpack log")
 	}
+
 	l.logger.WithFields(logan.F{
 		"sender":  event.Sender.Hex(),
 		"amount0": event.Amount0.String(),
@@ -112,10 +120,12 @@ func (l *Listener) handleMint(ctx context.Context, log *types.Log) error {
 
 func (l *Listener) handleBurn(ctx context.Context, log *types.Log) error {
 	var event uniswapv2pair.UniswapV2PairBurn
-	err := l.pairABI.UnpackIntoInterface(&event, "Burn", log.Data)
+
+	err := l.eventUnpacker.Unpack(&event, BurnEvent, log.Data)
 	if err != nil {
-		return errors.Wrap(err, "failed to unpack Mint event")
+		return errors.Wrap(err, "failed to unpack log")
 	}
+
 	l.logger.WithFields(logan.F{
 		"sender":  event.Sender.Hex(),
 		"amount0": event.Amount0.String(),
