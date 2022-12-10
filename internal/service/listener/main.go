@@ -45,7 +45,7 @@ func NewListener(cfg config.Config) (*Listener, error) {
 		logger:       cfg.Log().WithField("service", "listener"),
 		pairABI:      pairABI,
 		currentBlock: providers.NewBlockProvider(cfg.Redis()),
-		events:       channels.NewReservesUpdateInmemoryChan(),
+		events:       channels.NewReservesUpdateChan(),
 	}, nil
 }
 

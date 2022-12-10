@@ -16,7 +16,7 @@ type ReservesUpdateChan struct {
 	subscribers []chan ReservesUpdate
 }
 
-func NewReservesUpdateInmemoryChan() *ReservesUpdateChan {
+func NewReservesUpdateChan() *ReservesUpdateChan {
 	return &ReservesUpdateChan{
 		subscribers: make([]chan ReservesUpdate, 0),
 	}
