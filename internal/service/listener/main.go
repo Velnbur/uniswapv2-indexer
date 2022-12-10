@@ -15,7 +15,6 @@ import (
 
 	uniswapv2pair "github.com/Velnbur/uniswapv2-indexer/generated/uniswapv2-pair"
 	"github.com/Velnbur/uniswapv2-indexer/internal/channels"
-	"github.com/Velnbur/uniswapv2-indexer/internal/channels/inmemory"
 	"github.com/Velnbur/uniswapv2-indexer/internal/config"
 	"github.com/Velnbur/uniswapv2-indexer/internal/contracts"
 	"github.com/Velnbur/uniswapv2-indexer/internal/providers"
@@ -46,7 +45,7 @@ func NewListener(cfg config.Config) (*Listener, error) {
 		logger:       cfg.Log().WithField("service", "listener"),
 		pairABI:      pairABI,
 		currentBlock: providers.NewBlockProvider(cfg.Redis()),
-		events:       inmemory.NewSwapEventChan(),
+		events:       channels.NewReservesUpdateInmemoryChan(),
 	}, nil
 }
 

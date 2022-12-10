@@ -1,44 +1,43 @@
-package inmemory
+package channels
 
 import (
 	"context"
 	"errors"
 
-	"github.com/Velnbur/uniswapv2-indexer/internal/channels"
 	"github.com/Velnbur/uniswapv2-indexer/pkg/helpers"
 )
 
 // HACK: check if SwapEventChan implements channels.SwapEventsQueue
-var _ channels.ReservesUpdateQueue = &ReservesUpdateChan{}
+var _ ReservesUpdateQueue = &ReservesUpdateChan{}
 
 // ReservesUpdateChan - is a realization of in memory channels.SwapEventQueue
 // that makes everything through Go's channels
 type ReservesUpdateChan struct {
-	subscribers []chan channels.ReservesUpdate
+	subscribers []chan ReservesUpdate
 }
 
-func NewSwapEventChan() *ReservesUpdateChan {
+func NewReservesUpdateInmemoryChan() *ReservesUpdateChan {
 	return &ReservesUpdateChan{
-		subscribers: make([]chan channels.ReservesUpdate, 0),
+		subscribers: make([]chan ReservesUpdate, 0),
 	}
 }
 
 // TODO: may be, update it to more proper value
 const DefaultReservesUpdateChanLen = 256
 
-func (ch *ReservesUpdateChan) Receive(ctx context.Context) (<-chan channels.ReservesUpdate, error) {
+func (ch *ReservesUpdateChan) Receive(ctx context.Context) (<-chan ReservesUpdate, error) {
 	if helpers.IsCanceled(ctx) {
 		return nil, errors.New("context is canceled")
 	}
 
-	subscription := make(chan channels.ReservesUpdate, DefaultReservesUpdateChanLen)
+	subscription := make(chan ReservesUpdate, DefaultReservesUpdateChanLen)
 
 	ch.subscribers = append(ch.subscribers, subscription)
 
 	return subscription, nil
 }
 
-func (ch *ReservesUpdateChan) Send(ctx context.Context, events ...channels.ReservesUpdate) error {
+func (ch *ReservesUpdateChan) Send(ctx context.Context, events ...ReservesUpdate) error {
 	if helpers.IsCanceled(ctx) {
 		return errors.New("context is canceled")
 	}
@@ -51,7 +50,7 @@ func (ch *ReservesUpdateChan) Send(ctx context.Context, events ...channels.Reser
 }
 
 func (ch *ReservesUpdateChan) sendEventsToSubscriber(
-	subscriber chan<- channels.ReservesUpdate, events ...channels.ReservesUpdate,
+	subscriber chan<- ReservesUpdate, events ...ReservesUpdate,
 ) {
 	for _, event := range events {
 		subscriber <- event
