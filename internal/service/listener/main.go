@@ -29,7 +29,10 @@ type Listener struct {
 
 	currentBlock providers.CurrentBlockProvider
 
-	events channels.ReservesUpdateQueue
+	reservesUpdateEvents channels.ReservesUpdateQueue
+	paitCreationEvents   channels.PairCreationQueue
+
+	eventHandlers map[common.Hash]EventHandler
 }
 
 func NewListener(cfg config.Config) (*Listener, error) {
@@ -40,13 +43,16 @@ func NewListener(cfg config.Config) (*Listener, error) {
 		return nil, errors.Wrap(err, "failed to parse pair ABI")
 	}
 
-	return &Listener{
-		client:       cfg.EthereumClient(),
-		logger:       cfg.Log().WithField("service", "listener"),
-		pairABI:      pairABI,
-		currentBlock: providers.NewBlockProvider(cfg.Redis()),
-		events:       channels.NewReservesUpdateChan(),
-	}, nil
+	listener := &Listener{
+		client:               cfg.EthereumClient(),
+		logger:               cfg.Log().WithField("service", "listener"),
+		pairABI:              pairABI,
+		currentBlock:         providers.NewBlockProvider(cfg.Redis()),
+		reservesUpdateEvents: channels.NewReservesUpdateChan(),
+	}
+	listener.initHandlers(pairABI)
+
+	return listener, nil
 }
 
 func (l *Listener) Run(ctx context.Context) error {
@@ -77,7 +83,7 @@ func (l *Listener) Listen(ctx context.Context) error {
 		case err := <-sub.Err():
 			return errors.Wrap(err, "failed to subscribe to logs")
 		case vLog := <-logs:
-			if err := l.handleEvent(ctx, vLog); err != nil {
+			if err := l.handleEvent(ctx, &vLog); err != nil {
 				l.logger.WithError(err).Error("failed to handle event")
 			}
 		}
@@ -126,109 +132,4 @@ func (l *Listener) getAllPairsAddresses() []common.Address {
 	})
 
 	return addresses
-}
-
-func (l *Listener) handleEvent(ctx context.Context, log types.Log) error {
-	if err := l.currentBlock.UpdateBlock(ctx, log.BlockNumber); err != nil {
-		return errors.Wrap(err, "failed to update current block number")
-	}
-
-	switch log.Topics[0] {
-	case l.pairABI.Events["Swap"].ID:
-		return l.handleSwap(ctx, log)
-	case l.pairABI.Events["Sync"].ID:
-		return l.handleSync(ctx, log)
-	case l.pairABI.Events["Mint"].ID:
-		return l.handleMint(ctx, log)
-	case l.pairABI.Events["Burn"].ID:
-		return nil
-	default:
-		return nil
-	}
-}
-
-func (l *Listener) handleSwap(ctx context.Context, log types.Log) error {
-	var event uniswapv2pair.UniswapV2PairSwap
-	err := l.pairABI.UnpackIntoInterface(&event, "Swap", log.Data)
-	if err != nil {
-		return errors.Wrap(err, "failed to unpack Swap event")
-	}
-	l.logger.WithFields(logan.F{
-		"sender":     event.Sender.Hex(),
-		"amount0In":  event.Amount0In.String(),
-		"amount1In":  event.Amount1In.String(),
-		"amount0Out": event.Amount0Out.String(),
-		"amount1Out": event.Amount1Out.String(),
-		"to":         event.To.Hex(),
-	}).Debug("received log")
-
-	err = l.events.Send(ctx, channels.ReservesUpdate{
-		Address:       event.Raw.Address,
-		Reserve0Delta: &big.Int{},
-		Reserve1Delta: &big.Int{},
-	})
-	return errors.Wrap(err, "failed to add event to queue")
-}
-
-func (l *Listener) handleSync(ctx context.Context, log types.Log) error {
-	var event uniswapv2pair.UniswapV2PairSync
-	err := l.pairABI.UnpackIntoInterface(&event, "Sync", log.Data)
-	if err != nil {
-		return errors.Wrap(err, "failed to unpack Sync event")
-	}
-	l.logger.WithFields(logan.F{
-		"reserve0": event.Reserve0.String(),
-		"reserve1": event.Reserve1.String(),
-	}).Debug("received log")
-
-	err = l.events.Send(ctx, channels.ReservesUpdate{
-		Address:       event.Raw.Address,
-		Reserve0Delta: event.Reserve0,
-		Reserve1Delta: event.Reserve1,
-	})
-
-	return errors.Wrap(err, "failed to add event to queue")
-}
-
-func (l *Listener) handleMint(ctx context.Context, log types.Log) error {
-	var event uniswapv2pair.UniswapV2PairMint
-	err := l.pairABI.UnpackIntoInterface(&event, "Mint", log.Data)
-	if err != nil {
-		return errors.Wrap(err, "failed to unpack Mint event")
-	}
-	l.logger.WithFields(logan.F{
-		"sender":  event.Sender.Hex(),
-		"amount0": event.Amount0.String(),
-		"amount1": event.Amount1.String(),
-	}).Debug("received log")
-
-	err = l.events.Send(ctx, channels.ReservesUpdate{
-		Address:       event.Raw.Address,
-		Reserve0Delta: event.Amount0,
-		Reserve1Delta: event.Amount1,
-	})
-
-	return errors.Wrap(err, "failed to add event to queue")
-}
-
-func (l *Listener) handleBurn(ctx context.Context, log types.Log) error {
-	var event uniswapv2pair.UniswapV2PairBurn
-	err := l.pairABI.UnpackIntoInterface(&event, "Burn", log.Data)
-	if err != nil {
-		return errors.Wrap(err, "failed to unpack Mint event")
-	}
-	l.logger.WithFields(logan.F{
-		"sender":  event.Sender.Hex(),
-		"amount0": event.Amount0.String(),
-		"amount1": event.Amount1.String(),
-		"to":      event.To.Hex(),
-	}).Debug("received log")
-
-	err = l.events.Send(ctx, channels.ReservesUpdate{
-		Address:       event.Raw.Address,
-		Reserve0Delta: event.Amount0,
-		Reserve1Delta: event.Amount1,
-	})
-
-	return errors.Wrap(err, "failed to add event to queue")
 }
