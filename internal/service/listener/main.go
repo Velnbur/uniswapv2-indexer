@@ -56,7 +56,7 @@ func NewListener(cfg config.Config) (*Listener, error) {
 		factoryABI:    factoryABI,
 		currentBlock:  providers.NewBlockProvider(cfg.Redis()),
 		eventQueue:    channels.NewEventChan(),
-		eventUnpacker: NewEventUnpacker(&pairABI),
+		eventUnpacker: NewEventUnpacker(&pairABI, &factoryABI),
 	}
 	listener.initHandlers(pairABI, factoryABI)
 

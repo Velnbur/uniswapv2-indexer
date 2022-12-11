@@ -9,15 +9,23 @@ import (
 // EventUnpacker - from ABI unpackes configured events
 // into structs
 type EventUnpacker struct {
-	abi *abiPkg.ABI
+	pair    *abiPkg.ABI
+	factory *abiPkg.ABI
 }
 
-func NewEventUnpacker(abi *abiPkg.ABI) *EventUnpacker {
-	return &EventUnpacker{abi}
+func NewEventUnpacker(pair, factory *abiPkg.ABI) *EventUnpacker {
+	return &EventUnpacker{pair, factory}
 }
 
 func (e *EventUnpacker) Unpack(dest interface{}, event EventKey, data []byte) error {
-	err := e.abi.UnpackIntoInterface(dest, string(event), data)
+	var err error
+
+	switch event {
+	case SwapEvent, SyncEvent, MintEvent, BurnEvent:
+		err = e.pair.UnpackIntoInterface(dest, string(event), data)
+	case PairCreatedEvent:
+		err = e.factory.UnpackIntoInterface(dest, string(event), data)
+	}
 
 	return errors.Wrap(err, "failed to unpack event", logan.F{
 		"event": event,

@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"gitlab.com/distributed_lab/logan/v3"
 
+	uniswapv2factory "github.com/Velnbur/uniswapv2-indexer/generated/uniswapv2-factory"
 	uniswapv2pair "github.com/Velnbur/uniswapv2-indexer/generated/uniswapv2-pair"
 	"github.com/Velnbur/uniswapv2-indexer/internal/channels"
 )
@@ -19,10 +20,12 @@ type EventHandler func(ctx context.Context, log *types.Log) error
 func (l *Listener) initHandlers(pair, factory abi.ABI) {
 	l.eventHandlers = map[common.Hash]EventHandler{
 		// TODO:
-		pair.Events["Swap"].ID: l.handleSwap,
-		pair.Events["Sync"].ID: l.handleSync,
-		pair.Events["Burn"].ID: l.handleBurn,
-		pair.Events["Mint"].ID: l.handleMint,
+		pair.Events[SwapEvent.String()].ID: l.handleSwap,
+		pair.Events[SyncEvent.String()].ID: l.handleSync,
+		pair.Events[BurnEvent.String()].ID: l.handleBurn,
+		pair.Events[MintEvent.String()].ID: l.handleMint,
+
+		factory.Events[PairCreatedEvent.String()].ID: l.handlePairCreation,
 	}
 }
 
@@ -56,13 +59,14 @@ func (l *Listener) handleSwap(ctx context.Context, log *types.Log) error {
 	}
 
 	l.logger.WithFields(logan.F{
+		"pair":       event.Raw.Address,
 		"sender":     event.Sender.Hex(),
 		"amount0In":  event.Amount0In.String(),
 		"amount1In":  event.Amount1In.String(),
 		"amount0Out": event.Amount0Out.String(),
 		"amount1Out": event.Amount1Out.String(),
 		"to":         event.To.Hex(),
-	}).Debug("received log")
+	}).Debug("pair swap")
 
 	err = l.eventQueue.Send(ctx, channels.Event{
 		Type: channels.ReservesUpdateEvent,
@@ -85,9 +89,10 @@ func (l *Listener) handleSync(ctx context.Context, log *types.Log) error {
 	}
 
 	l.logger.WithFields(logan.F{
+		"pair":     event.Raw.Address,
 		"reserve0": event.Reserve0.String(),
 		"reserve1": event.Reserve1.String(),
-	}).Debug("received log")
+	}).Debug("pair sync")
 
 	err = l.eventQueue.Send(ctx, channels.Event{
 		Type: channels.ReservesUpdateEvent,
@@ -110,10 +115,11 @@ func (l *Listener) handleMint(ctx context.Context, log *types.Log) error {
 	}
 
 	l.logger.WithFields(logan.F{
+		"pair":    event.Raw.Address,
 		"sender":  event.Sender.Hex(),
 		"amount0": event.Amount0.String(),
 		"amount1": event.Amount1.String(),
-	}).Debug("received log")
+	}).Debug("pair mint")
 
 	err = l.eventQueue.Send(ctx, channels.Event{
 		Type: channels.ReservesUpdateEvent,
@@ -140,7 +146,7 @@ func (l *Listener) handleBurn(ctx context.Context, log *types.Log) error {
 		"amount0": event.Amount0.String(),
 		"amount1": event.Amount1.String(),
 		"to":      event.To.Hex(),
-	}).Debug("received log")
+	}).Debug("pair burn")
 
 	err = l.eventQueue.Send(ctx, channels.Event{
 		Type: channels.ReservesUpdateEvent,
@@ -152,4 +158,31 @@ func (l *Listener) handleBurn(ctx context.Context, log *types.Log) error {
 	})
 
 	return errors.Wrap(err, "failed to add event to queue")
+}
+
+func (l *Listener) handlePairCreation(ctx context.Context, log *types.Log) error {
+	var event uniswapv2factory.UniswapV2FactoryPairCreated
+
+	err := l.eventUnpacker.Unpack(&event, PairCreatedEvent, log.Data)
+	if err != nil {
+		return errors.Wrap(err, "failed to unpack log")
+	}
+
+	l.logger.WithFields(logan.F{
+		"pair":   event.Pair,
+		"token0": event.Token0,
+		"token1": event.Token1,
+	}).Debug("pair created")
+
+	err = l.eventQueue.Send(ctx, channels.Event{
+		Type: channels.PairCreationEvent,
+		PairCreation: &channels.PairCreation{
+			Address: event.Pair,
+			// FIXME:
+			Reserve0: &big.Int{},
+			Reserve1: &big.Int{},
+		},
+	})
+
+	return errors.Wrap(err, "failed to sent pair creation event")
 }
