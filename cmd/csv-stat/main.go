@@ -89,7 +89,7 @@ func main() {
 		log.WithError(err).Fatal("failed to get amount of pairs")
 	}
 
-	wp := workerspool.NewWorkingPool(16, int64(amount))
+	wp := workerspool.NewWorkingPool(5, int64(amount))
 
 	for i := 0; i < int(amount); i++ {
 		i := i
@@ -119,29 +119,14 @@ func main() {
 						"index": i,
 					})
 				}
-				symbol0, err := token0.Symbol(ctx)
-				if err != nil {
-					return errors.Wrap(err, "failed to get symbol0", logan.F{
-						"index": i,
-					})
-				}
-
-				symbol1, err := token1.Symbol(ctx)
-				if err != nil {
-					return errors.Wrap(err, "failed to get symbol1", logan.F{
-						"index": i,
-					})
-				}
 
 				mx.Lock()
 				defer mx.Unlock()
 				err = writer.Write([]string{
 					pair.Address.String(),
 					token0.Address().Hex(),
-					symbol0,
 					reserve0.String(),
 					token1.Address().Hex(),
-					symbol1,
 					reserve1.String(),
 				})
 				if err != nil {
@@ -153,10 +138,8 @@ func main() {
 				writer.Flush()
 
 				log.WithFields(logan.F{
-					"index":   i,
-					"pair":    pair.Address.String(),
-					"symbol0": symbol0,
-					"symbol1": symbol1,
+					"index": i,
+					"pair":  pair.Address.String(),
 				}).Debug("processed")
 				return nil
 			}

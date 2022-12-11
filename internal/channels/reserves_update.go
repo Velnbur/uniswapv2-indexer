@@ -1,7 +1,6 @@
 package channels
 
 import (
-	"context"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -15,9 +14,4 @@ type ReservesUpdate struct {
 	Address       common.Address
 	Reserve0Delta *big.Int
 	Reserve1Delta *big.Int
-}
-
-type ReservesUpdateQueue interface {
-	Send(ctx context.Context, events ...ReservesUpdate) error
-	Receive(ctx context.Context) (<-chan ReservesUpdate, error)
 }

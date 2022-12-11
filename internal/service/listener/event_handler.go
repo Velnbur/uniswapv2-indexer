@@ -16,13 +16,13 @@ import (
 
 type EventHandler func(ctx context.Context, log *types.Log) error
 
-func (l *Listener) initHandlers(pairABI abi.ABI) {
+func (l *Listener) initHandlers(pair, factory abi.ABI) {
 	l.eventHandlers = map[common.Hash]EventHandler{
 		// TODO:
-		pairABI.Events["Swap"].ID: l.handleSwap,
-		pairABI.Events["Sync"].ID: l.handleSync,
-		pairABI.Events["Burn"].ID: l.handleBurn,
-		pairABI.Events["Mint"].ID: l.handleMint,
+		pair.Events["Swap"].ID: l.handleSwap,
+		pair.Events["Sync"].ID: l.handleSync,
+		pair.Events["Burn"].ID: l.handleBurn,
+		pair.Events["Mint"].ID: l.handleMint,
 	}
 }
 
@@ -64,11 +64,14 @@ func (l *Listener) handleSwap(ctx context.Context, log *types.Log) error {
 		"to":         event.To.Hex(),
 	}).Debug("received log")
 
-	err = l.reservesUpdateEvents.Send(ctx, channels.ReservesUpdate{
-		Address: event.Raw.Address,
-		// FIXME:
-		Reserve0Delta: &big.Int{},
-		Reserve1Delta: &big.Int{},
+	err = l.eventQueue.Send(ctx, channels.Event{
+		Type: channels.ReservesUpdateEvent,
+		ReservesUpdate: &channels.ReservesUpdate{
+			Address: event.Raw.Address,
+			// FIXME:
+			Reserve0Delta: &big.Int{},
+			Reserve1Delta: &big.Int{},
+		},
 	})
 	return errors.Wrap(err, "failed to add event to queue")
 }
@@ -86,10 +89,13 @@ func (l *Listener) handleSync(ctx context.Context, log *types.Log) error {
 		"reserve1": event.Reserve1.String(),
 	}).Debug("received log")
 
-	err = l.reservesUpdateEvents.Send(ctx, channels.ReservesUpdate{
-		Address:       event.Raw.Address,
-		Reserve0Delta: event.Reserve0,
-		Reserve1Delta: event.Reserve1,
+	err = l.eventQueue.Send(ctx, channels.Event{
+		Type: channels.ReservesUpdateEvent,
+		ReservesUpdate: &channels.ReservesUpdate{
+			Address:       event.Raw.Address,
+			Reserve0Delta: event.Reserve0,
+			Reserve1Delta: event.Reserve1,
+		},
 	})
 
 	return errors.Wrap(err, "failed to add event to queue")
@@ -109,10 +115,13 @@ func (l *Listener) handleMint(ctx context.Context, log *types.Log) error {
 		"amount1": event.Amount1.String(),
 	}).Debug("received log")
 
-	err = l.reservesUpdateEvents.Send(ctx, channels.ReservesUpdate{
-		Address:       event.Raw.Address,
-		Reserve0Delta: event.Amount0,
-		Reserve1Delta: event.Amount1,
+	err = l.eventQueue.Send(ctx, channels.Event{
+		Type: channels.ReservesUpdateEvent,
+		ReservesUpdate: &channels.ReservesUpdate{
+			Address:       event.Raw.Address,
+			Reserve0Delta: event.Amount0,
+			Reserve1Delta: event.Amount1,
+		},
 	})
 
 	return errors.Wrap(err, "failed to add event to queue")
@@ -133,10 +142,13 @@ func (l *Listener) handleBurn(ctx context.Context, log *types.Log) error {
 		"to":      event.To.Hex(),
 	}).Debug("received log")
 
-	err = l.reservesUpdateEvents.Send(ctx, channels.ReservesUpdate{
-		Address:       event.Raw.Address,
-		Reserve0Delta: event.Amount0,
-		Reserve1Delta: event.Amount1,
+	err = l.eventQueue.Send(ctx, channels.Event{
+		Type: channels.ReservesUpdateEvent,
+		ReservesUpdate: &channels.ReservesUpdate{
+			Address:       event.Raw.Address,
+			Reserve0Delta: event.Amount0,
+			Reserve1Delta: event.Amount1,
+		},
 	})
 
 	return errors.Wrap(err, "failed to add event to queue")

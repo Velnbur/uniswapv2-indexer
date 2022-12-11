@@ -3,10 +3,11 @@ package listener
 type EventKey string
 
 const (
-	SwapEvent EventKey = "Swap"
-	SyncEvent EventKey = "Sync"
-	MintEvent EventKey = "Mint"
-	BurnEvent EventKey = "Burn"
+	SwapEvent        EventKey = "Swap"
+	SyncEvent        EventKey = "Sync"
+	MintEvent        EventKey = "Mint"
+	BurnEvent        EventKey = "Burn"
+	PairCreatedEvent EventKey = "PairCreated"
 )
 
 func AllEvents() []EventKey {
@@ -15,5 +16,6 @@ func AllEvents() []EventKey {
 		SyncEvent,
 		BurnEvent,
 		MintEvent,
+		PairCreatedEvent,
 	}
 }

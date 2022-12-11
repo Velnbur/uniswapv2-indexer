@@ -15,6 +15,7 @@ type Config interface {
 
 	Contracter
 	Ethereumer
+	Queuer
 
 	Redis() *redis.Client
 }
@@ -27,6 +28,7 @@ type config struct {
 
 	Contracter
 	Ethereumer
+	Queuer
 
 	redis comfig.Once
 }
@@ -39,5 +41,6 @@ func New(getter kv.Getter) Config {
 		Logger:     comfig.NewLogger(getter, comfig.LoggerOpts{}),
 		Contracter: NewContracterCfg(getter),
 		Ethereumer: NewEthereumCfg(getter),
+		Queuer:     &queuer{},
 	}
 }

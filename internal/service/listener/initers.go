@@ -5,9 +5,10 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/pkg/errors"
 	"gitlab.com/distributed_lab/logan/v3"
+	"gitlab.com/distributed_lab/logan/v3/errors"
 
+	"github.com/Velnbur/uniswapv2-indexer/internal/channels"
 	"github.com/Velnbur/uniswapv2-indexer/pkg/helpers"
 	workerspool "github.com/Velnbur/uniswapv2-indexer/pkg/workers-pool"
 )
@@ -47,6 +48,30 @@ func (l *Listener) initContracts(ctx context.Context) error {
 			}).Debug("got pair")
 
 			l.uniswapV2.Pairs.Set(pair.Address, pair)
+
+			reserve0, reserve1, err := pair.GetReserves(ctx)
+			if err != nil {
+				return errors.Wrap(err, "failed to get reserves", logan.F{
+					"address": pair.Address,
+				})
+			}
+
+			err = l.eventQueue.Send(ctx, channels.Event{
+				Type: channels.PairCreationEvent,
+				PairCreation: &channels.PairCreation{
+					Address:  pair.Address,
+					Reserve0: reserve0,
+					Reserve1: reserve1,
+				},
+			})
+			if err != nil {
+				return errors.Wrap(err, "failed to send pair creation event",
+					logan.F{
+						"reserve0": reserve0.String(),
+						"reserve1": reserve1.String(),
+						"address":  pair.Address,
+					})
+			}
 			return nil
 		})
 	}
