@@ -39,7 +39,7 @@ func (p *UniswapV2FactoryRedisProvider) SetPairByIndex(
 ) error {
 	key := fmt.Sprintf(uniswapV2FactoryPairKey, factory.Hex(), index)
 
-	return p.redis.Set(p.redis.Context(), key, pair.Hex(), 0).Err()
+	return p.redis.Set(ctx, key, pair.Hex(), 0).Err()
 }
 
 func NewUniswapV2FactoryRedisProvider(
@@ -48,4 +48,32 @@ func NewUniswapV2FactoryRedisProvider(
 	return &UniswapV2FactoryRedisProvider{
 		redis: redis,
 	}
+}
+
+const uniswapV2FactoryPairByTokensKey = "uniswapV2:factory:%s:pair:%s-%s"
+
+func (p *UniswapV2FactoryRedisProvider) GetPairByTokens(
+	ctx context.Context, factory, token0, token1 common.Address,
+) (common.Address, error) {
+	key := fmt.Sprintf(uniswapV2FactoryPairByTokensKey, factory.Hex(), token0.Hex(), token1.Hex())
+
+	var value string
+	err := p.redis.Get(p.redis.Context(), key).Scan(&value)
+
+	switch err {
+	case nil:
+		return common.HexToAddress(value), nil
+	case redis.Nil:
+		return common.Address{}, nil
+	default:
+		return common.Address{}, err
+	}
+}
+
+func (p *UniswapV2FactoryRedisProvider) SetPairByTokens(
+	ctx context.Context, factory, token0, token1, pair common.Address,
+) error {
+	key := fmt.Sprintf(uniswapV2FactoryPairByTokensKey, factory.Hex(), token0.Hex(), token1.Hex())
+
+	return p.redis.Set(ctx, key, pair.Hex(), 0).Err()
 }

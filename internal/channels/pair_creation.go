@@ -10,5 +10,6 @@ import (
 // contract
 type PairCreation struct {
 	Address            common.Address
+	Token0, Token1     common.Address
 	Reserve0, Reserve1 *big.Int
 }

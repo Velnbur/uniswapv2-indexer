@@ -6,6 +6,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+var ZeroAddress = common.Address{}
+
 func IsCanceled(ctx context.Context) bool {
 	select {
 	case <-ctx.Done():
@@ -16,5 +18,5 @@ func IsCanceled(ctx context.Context) bool {
 }
 
 func IsAddressZero(address common.Address) bool {
-	return address == common.Address{}
+	return address == ZeroAddress
 }

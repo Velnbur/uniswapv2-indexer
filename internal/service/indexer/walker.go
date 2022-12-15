@@ -1,73 +1,60 @@
 package indexer
 
-import "github.com/ethereum/go-ethereum/common"
+import (
+	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
+)
 
 type Walker struct {
 	path Path
 
 	root, current common.Address
-	graph         *Graph
 }
 
-type Path map[common.Address]int
-
-func NewPath(start common.Address) Path {
-	return Path{start: 0}
-}
-
-func (p Path) GetSlice() []common.Address {
-	path := make([]common.Address, len(p))
-	for addr, i := range p {
-		path[i] = addr
-	}
-	return path
-}
-
-func (p Path) Append(addr common.Address) {
-	p[addr] = len(p)
-}
-
-func (p Path) Contains(addr common.Address) bool {
-	_, ok := p[addr]
-	return ok
-}
-
-func (p Path) Copy() Path {
-	path := make(Path, len(p))
-	for addr, i := range p {
-		path[addr] = i
-	}
-	return path
-}
-
-func NewWalker(graph *Graph, root common.Address) *Walker {
+func NewWalker(root common.Address) *Walker {
 	return &Walker{
-		graph:   graph,
 		root:    root,
 		current: root,
-		path:    map[common.Address]int{root: 0},
+		path:    NewPath(root),
 	}
 }
 
 func (w *Walker) GetPath() []common.Address {
-	return w.path.GetSlice()
+	return w.path
 }
 
-func (w *Walker) Next() (bool, []*Walker) {
+func (w *Walker) Current() common.Address {
+	return w.current
+}
+
+const MinimumLiquidity = 1000
+
+var (
+	minimumLiquidityBig = big.NewInt(MinimumLiquidity)
+)
+
+func (w *Walker) Next(routes map[common.Address]*Edge) (bool, []*Walker) {
 	walkers := make([]*Walker, 0)
 
-	for next := range w.graph.GetNode(w.current).routes {
+	for next, edge := range routes {
 		if w.path.Contains(next) {
-			path := w.path.Copy()
-			path.Append(next)
-
-			walkers = append(walkers, &Walker{
-				path:    path,
-				root:    w.root,
-				current: next,
-				graph:   w.graph,
-			})
+			continue
 		}
+
+		// this route is not  usable bacause lack of liquidity
+		if edge.Reserve0.Cmp(minimumLiquidityBig) < 0 || edge.Reserve1.Cmp(minimumLiquidityBig) < 0 {
+			continue
+		}
+
+		path := w.path.Copy()
+		path.Append(next)
+
+		walkers = append(walkers, &Walker{
+			path:    path,
+			root:    w.root,
+			current: next,
+		})
 	}
 
 	// If there are no more sub walkers (walker has no next routes),

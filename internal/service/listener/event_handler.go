@@ -7,8 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/pkg/errors"
 	"gitlab.com/distributed_lab/logan/v3"
+	"gitlab.com/distributed_lab/logan/v3/errors"
 
 	uniswapv2factory "github.com/Velnbur/uniswapv2-indexer/generated/uniswapv2-factory"
 	uniswapv2pair "github.com/Velnbur/uniswapv2-indexer/generated/uniswapv2-pair"
@@ -68,10 +68,17 @@ func (l *Listener) handleSwap(ctx context.Context, log *types.Log) error {
 		"to":         event.To.Hex(),
 	}).Debug("pair swap")
 
+	token0, token1, err := l.getTokens(ctx, event.Raw.Address)
+	if err != nil {
+		return errors.Wrap(err, "failed get tokens")
+	}
+
 	err = l.eventQueue.Send(ctx, channels.Event{
 		Type: channels.ReservesUpdateEvent,
 		ReservesUpdate: &channels.ReservesUpdate{
 			Address: event.Raw.Address,
+			Token0:  token0,
+			Token1:  token1,
 			// FIXME:
 			Reserve0Delta: &big.Int{},
 			Reserve1Delta: &big.Int{},
@@ -94,10 +101,17 @@ func (l *Listener) handleSync(ctx context.Context, log *types.Log) error {
 		"reserve1": event.Reserve1.String(),
 	}).Debug("pair sync")
 
+	token0, token1, err := l.getTokens(ctx, event.Raw.Address)
+	if err != nil {
+		return errors.Wrap(err, "failed get tokens")
+	}
+
 	err = l.eventQueue.Send(ctx, channels.Event{
 		Type: channels.ReservesUpdateEvent,
 		ReservesUpdate: &channels.ReservesUpdate{
 			Address:       event.Raw.Address,
+			Token0:        token0,
+			Token1:        token1,
 			Reserve0Delta: event.Reserve0,
 			Reserve1Delta: event.Reserve1,
 		},
@@ -121,10 +135,17 @@ func (l *Listener) handleMint(ctx context.Context, log *types.Log) error {
 		"amount1": event.Amount1.String(),
 	}).Debug("pair mint")
 
+	token0, token1, err := l.getTokens(ctx, event.Raw.Address)
+	if err != nil {
+		return errors.Wrap(err, "failed get tokens")
+	}
+
 	err = l.eventQueue.Send(ctx, channels.Event{
 		Type: channels.ReservesUpdateEvent,
 		ReservesUpdate: &channels.ReservesUpdate{
 			Address:       event.Raw.Address,
+			Token0:        token0,
+			Token1:        token1,
 			Reserve0Delta: event.Amount0,
 			Reserve1Delta: event.Amount1,
 		},
@@ -148,10 +169,17 @@ func (l *Listener) handleBurn(ctx context.Context, log *types.Log) error {
 		"to":      event.To.Hex(),
 	}).Debug("pair burn")
 
+	token0, token1, err := l.getTokens(ctx, event.Raw.Address)
+	if err != nil {
+		return errors.Wrap(err, "failed get tokens")
+	}
+
 	err = l.eventQueue.Send(ctx, channels.Event{
 		Type: channels.ReservesUpdateEvent,
 		ReservesUpdate: &channels.ReservesUpdate{
 			Address:       event.Raw.Address,
+			Token0:        token0,
+			Token1:        token1,
 			Reserve0Delta: event.Amount0,
 			Reserve1Delta: event.Amount1,
 		},
@@ -174,15 +202,55 @@ func (l *Listener) handlePairCreation(ctx context.Context, log *types.Log) error
 		"token1": event.Token1,
 	}).Debug("pair created")
 
+	token0, token1, err := l.getTokens(ctx, event.Raw.Address)
+	if err != nil {
+		return errors.Wrap(err, "failed get tokens")
+	}
+
+	pair := l.uniswapV2.Pairs.Get(event.Raw.Address)
+	reserve0, reserve1, err := pair.GetReserves(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to get reserves", logan.F{
+			"pair": pair.Address,
+		})
+	}
+
 	err = l.eventQueue.Send(ctx, channels.Event{
 		Type: channels.PairCreationEvent,
 		PairCreation: &channels.PairCreation{
-			Address: event.Pair,
-			// FIXME:
-			Reserve0: &big.Int{},
-			Reserve1: &big.Int{},
+			Address:  event.Pair,
+			Token0:   token0,
+			Token1:   token1,
+			Reserve0: reserve0,
+			Reserve1: reserve1,
 		},
 	})
 
 	return errors.Wrap(err, "failed to sent pair creation event")
+}
+
+func (l *Listener) getTokens(
+	ctx context.Context, pairAddress common.Address,
+) (token0, token1 common.Address, err error) {
+
+	pair := l.uniswapV2.Pairs.Get(pairAddress)
+
+	token0Contract, err := pair.Token0(ctx)
+	if err != nil {
+		return common.Address{}, common.Address{}, errors.Wrap(err,
+			"failed to get token0",
+			logan.F{
+				"pair": pairAddress.Hex(),
+			})
+	}
+	token1Contract, err := pair.Token1(ctx)
+	if err != nil {
+		return common.Address{}, common.Address{}, errors.Wrap(err,
+			"failed to get token1",
+			logan.F{
+				"pair": pairAddress.Hex(),
+			})
+	}
+
+	return token0Contract.Address(), token1Contract.Address(), nil
 }

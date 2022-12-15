@@ -12,11 +12,6 @@ type weightsMapKey struct {
 	Token1 common.Address
 }
 
-type weightsMapValue struct {
-	Reserve0 *big.Int
-	Reserve1 *big.Int
-}
-
 type WeightsMap struct {
 	m sync.Map
 }
@@ -25,26 +20,16 @@ func NewWeightsMap() *WeightsMap {
 	return &WeightsMap{}
 }
 
-func (wm *WeightsMap) Get(token0, token1 common.Address) (*big.Int, *big.Int, bool) {
+func (wm *WeightsMap) Get(token0, token1 common.Address) (*big.Float, bool) {
 	res, ok := wm.m.Load(weightsMapKey{token0, token1})
 	if !ok {
-		return nil, nil, false
+		return nil, false
 	}
-	value := res.(weightsMapValue)
+	value := res.(*big.Float)
 
-	reserve0 := new(big.Int).Set(value.Reserve0)
-	reserve1 := new(big.Int).Set(value.Reserve1)
-
-	return reserve0, reserve1, true
+	return new(big.Float).Set(value), true
 }
 
-func (wm *WeightsMap) Set(
-	token0, token1 common.Address,
-	reserve0, reserve1 *big.Int,
-) {
-	value := weightsMapValue{
-		Reserve0: new(big.Int).Set(reserve0),
-		Reserve1: new(big.Int).Set(reserve1),
-	}
-	wm.m.Store(weightsMapKey{token0, token1}, value)
+func (wm *WeightsMap) Set(token0, token1 common.Address, value *big.Float) {
+	wm.m.Store(weightsMapKey{token0, token1}, new(big.Float).Set(value))
 }

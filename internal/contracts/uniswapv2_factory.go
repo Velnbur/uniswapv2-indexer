@@ -7,8 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/pkg/errors"
 	"gitlab.com/distributed_lab/logan/v3"
+	"gitlab.com/distributed_lab/logan/v3/errors"
 
 	uniswapv2factory "github.com/Velnbur/uniswapv2-indexer/generated/uniswapv2-factory"
 	"github.com/Velnbur/uniswapv2-indexer/internal/providers"
@@ -110,6 +110,56 @@ func (u *UniswapV2Factory) AllPairs(
 	return NewUniswapV2Pair(
 		UniswapV2PairConfig{
 			Address:       pairAddress,
+			Client:        u.client,
+			Logger:        u.logger,
+			Provider:      u.pairProvider,
+			Erc20Provider: u.erc20Provider,
+		},
+	)
+}
+
+func (u *UniswapV2Factory) GetPool(
+	ctx context.Context, token0, token1 common.Address,
+) (*UniswapV2Pair, error) {
+	if u.provider != nil {
+		pair, err := u.provider.GetPairByTokens(ctx, u.address, token0, token1)
+		if err != nil {
+			u.logger.WithError(err).Error("failed to get pair from cache")
+		}
+		if !helpers.IsAddressZero(pair) {
+			return NewUniswapV2Pair(
+				UniswapV2PairConfig{
+					Address:       pair,
+					Client:        u.client,
+					Logger:        u.logger,
+					Provider:      u.pairProvider,
+					Erc20Provider: u.erc20Provider,
+				},
+			)
+		}
+	}
+
+	pair, err := u.contract.GetPair(&bind.CallOpts{
+		Context: ctx,
+	}, token0, token1)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed get pair from node", logan.F{
+			"token0": token0.Hex(),
+			"token1": token1.Hex(),
+		})
+	}
+
+	// save to cache
+	if u.provider != nil {
+		err = u.provider.SetPairByTokens(ctx, u.address, token0, token1, pair)
+		if err != nil {
+			u.logger.WithError(err).Error("failed to set pair to cache")
+		}
+	}
+
+	return NewUniswapV2Pair(
+		UniswapV2PairConfig{
+			Address:       pair,
 			Client:        u.client,
 			Logger:        u.logger,
 			Provider:      u.pairProvider,

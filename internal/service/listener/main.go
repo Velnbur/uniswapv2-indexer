@@ -26,6 +26,7 @@ type Listener struct {
 	factoryABI abi.ABI
 
 	uniswapV2 *contracts.UniswapV2
+	tokens    []*contracts.ERC20
 
 	currentBlock providers.CurrentBlockProvider
 
@@ -54,6 +55,7 @@ func NewListener(cfg config.Config) (*Listener, error) {
 		logger:        cfg.Log().WithField("service", "listener"),
 		pairABI:       pairABI,
 		factoryABI:    factoryABI,
+		tokens:        cfg.Tokens(),
 		currentBlock:  providers.NewBlockProvider(cfg.Redis()),
 		eventQueue:    channels.NewEventChan(),
 		eventUnpacker: NewEventUnpacker(&pairABI, &factoryABI),

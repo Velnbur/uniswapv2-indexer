@@ -11,7 +11,8 @@ import (
 // between old and new state. All could be nil, but not all at
 // the same time.
 type ReservesUpdate struct {
-	Address       common.Address
-	Reserve0Delta *big.Int
-	Reserve1Delta *big.Int
+	Address        common.Address
+	Token0, Token1 common.Address
+	Reserve0Delta  *big.Int
+	Reserve1Delta  *big.Int
 }
