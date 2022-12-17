@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"net"
 
 	"github.com/go-chi/chi"
 	"gitlab.com/distributed_lab/ape"
@@ -11,29 +10,35 @@ import (
 	"github.com/Velnbur/uniswapv2-indexer/internal/config"
 )
 
-type service struct {
-	log      *logan.Entry
-	listener net.Listener
-	router   chi.Router
-	cfg      config.Config
+type API struct {
+	log    *logan.Entry
+	router chi.Router
+
+	// FIXME: see "fix me" comment below
+	run func(ctx context.Context) error
 }
 
-func (s *service) run(ctx context.Context) error {
-	ape.Serve(ctx, s.router, s.cfg, ape.ServeOpts{})
-	return nil
-}
+func New(cfg config.Config) *API {
+	router := newRouter(cfg)
 
-func newService(cfg config.Config) *service {
-	return &service{
-		cfg:      cfg,
-		log:      cfg.Log(),
-		listener: cfg.Listener(),
-		router:   newRouter(cfg),
+	api := &API{
+		log:    cfg.Log(),
+		router: router,
+		// FIXME: I don't like the idea to save `config.Config` inside
+		// service structure, but `ape.Serve` literally needs it to as
+		// parameter
+		run: func(ctx context.Context) error {
+			ape.Serve(ctx, router, cfg, ape.ServeOpts{})
+			return nil
+		},
 	}
+
+	return api
 }
 
-func Run(ctx context.Context, cfg config.Config) {
-	if err := newService(cfg).run(ctx, cfg); err != nil {
-		panic(err)
+func (api *API) Run(ctx context.Context) error {
+	if api.run == nil {
+		api.log.Panic("run function was not provided")
 	}
+	return api.run(ctx)
 }
