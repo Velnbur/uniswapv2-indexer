@@ -6,6 +6,7 @@ import (
 
 	"github.com/Velnbur/uniswapv2-indexer/internal/config"
 	"github.com/Velnbur/uniswapv2-indexer/internal/service/api"
+	"github.com/Velnbur/uniswapv2-indexer/internal/service/indexer"
 	"github.com/Velnbur/uniswapv2-indexer/internal/service/listener"
 )
 
@@ -14,6 +15,7 @@ type Runner func(ctx context.Context, cfg config.Config)
 var services = map[string]Runner{
 	"api":      api.Run,
 	"listener": listener.Run,
+	"indexer":  indexer.Run,
 }
 
 func Run(ctx context.Context, cfg config.Config) {
