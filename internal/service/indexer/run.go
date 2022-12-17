@@ -7,5 +7,7 @@ import (
 )
 
 func Run(ctx context.Context, cfg config.Config) {
-
+	if err := New(cfg).Run(ctx); err != nil {
+		cfg.Log().WithError(err).Panic("indexer running failed")
+	}
 }

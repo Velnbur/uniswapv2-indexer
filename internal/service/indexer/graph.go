@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/Velnbur/uniswapv2-indexer/internal/data"
 	"github.com/Velnbur/uniswapv2-indexer/pkg/math"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -70,7 +71,7 @@ func (g *Graph) Index() {
 		walkers := []*Walker{
 			NewWalker(node),
 		}
-		pathes := make([]Path, 0)
+		pathes := make([]data.Path, 0)
 
 		for len(walkers) > 0 {
 			newWalkers := make([]*Walker, 0)
@@ -96,9 +97,9 @@ func (g *Graph) Index() {
 	}
 }
 
-func (g *Graph) BestPath(input, ouput common.Address, amountIn *big.Int) (Path, *big.Int) {
+func (g *Graph) BestPath(input, ouput common.Address, amountIn *big.Int) (data.Path, *big.Int) {
 	var (
-		bestPath      = make(Path, 0)
+		bestPath      = make(data.Path, 0)
 		bestAmountOut = big.NewInt(0)
 	)
 

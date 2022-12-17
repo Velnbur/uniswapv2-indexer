@@ -4,49 +4,23 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/Velnbur/uniswapv2-indexer/internal/data"
 )
-
-type Path []common.Address
-
-func NewPath(start common.Address) Path {
-	return Path{start}
-}
-
-func (p Path) Append(addr common.Address) {
-	p = append(p, addr)
-}
-
-func (p Path) Contains(addr common.Address) bool {
-	for _, elem := range p {
-		if elem == addr {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (p Path) Copy() Path {
-	path := make(Path, len(p))
-
-	copy(path, p)
-
-	return path
-}
 
 type PathesMap struct {
 	mutex sync.RWMutex
 
-	m map[EdgeKey][]Path
+	m map[EdgeKey][]data.Path
 }
 
 func NewPathesMap() *PathesMap {
 	return &PathesMap{
-		m: make(map[EdgeKey][]Path),
+		m: make(map[EdgeKey][]data.Path),
 	}
 }
 
-func (pm *PathesMap) AddPaths(pathes ...Path) {
+func (pm *PathesMap) AddPaths(pathes ...data.Path) {
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()
 
@@ -64,14 +38,14 @@ func (pm *PathesMap) AddPaths(pathes ...Path) {
 			return
 		}
 
-		pm.m[key] = []Path{path}
+		pm.m[key] = []data.Path{path}
 	}
 }
 
-func (pm *PathesMap) GetPath(token0, token1 common.Address) []Path {
+func (pm *PathesMap) GetPath(token0, token1 common.Address) []data.Path {
 	if pathes, ok := pm.m[EdgeKey{token0, token1}]; ok {
 		return pathes
 	}
 
-	return []Path{}
+	return []data.Path{}
 }

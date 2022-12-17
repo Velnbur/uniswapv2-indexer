@@ -1,13 +1,12 @@
 package indexer
 
 import (
-	"math/big"
-
+	"github.com/Velnbur/uniswapv2-indexer/internal/data"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 type Walker struct {
-	path Path
+	path data.Path
 
 	root, current common.Address
 }
@@ -16,7 +15,7 @@ func NewWalker(root common.Address) *Walker {
 	return &Walker{
 		root:    root,
 		current: root,
-		path:    NewPath(root),
+		path:    data.NewPath(root),
 	}
 }
 
@@ -28,22 +27,11 @@ func (w *Walker) Current() common.Address {
 	return w.current
 }
 
-const MinimumLiquidity = 1000
-
-var (
-	minimumLiquidityBig = big.NewInt(MinimumLiquidity)
-)
-
 func (w *Walker) Next(routes map[common.Address]*Edge) (bool, []*Walker) {
 	walkers := make([]*Walker, 0)
 
-	for next, edge := range routes {
+	for next := range routes {
 		if w.path.Contains(next) {
-			continue
-		}
-
-		// this route is not  usable bacause lack of liquidity
-		if edge.Reserve0.Cmp(minimumLiquidityBig) < 0 || edge.Reserve1.Cmp(minimumLiquidityBig) < 0 {
 			continue
 		}
 
