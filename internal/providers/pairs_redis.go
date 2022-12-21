@@ -36,8 +36,7 @@ func (p *UniswapV2PairsRedisProvider) GetTokens(
 
 	tokenStr, err := p.redis.Get(ctx, key).Result()
 
-	switch err {
-	case nil:
+	if err == nil {
 		var tokens tokens
 		err = json.Unmarshal([]byte(tokenStr), &tokens)
 		if err != nil {
@@ -46,13 +45,15 @@ func (p *UniswapV2PairsRedisProvider) GetTokens(
 			)
 		}
 		return tokens.Token0, tokens.Token1, nil
-	case redis.Nil:
-		return common.Address{}, common.Address{}, nil
-	default:
-		return common.Address{}, common.Address{}, errors.Wrap(err,
-			"failed to get tokens from redis",
-		)
 	}
+
+	if errors.Is(err, redis.Nil) {
+		return common.Address{}, common.Address{}, nil
+	}
+
+	return common.Address{}, common.Address{}, errors.Wrap(err,
+		"failed to get tokens from redis",
+	)
 }
 
 func (p *UniswapV2PairsRedisProvider) SetTokens(

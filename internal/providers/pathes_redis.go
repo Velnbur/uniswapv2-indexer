@@ -8,7 +8,7 @@ import (
 	"github.com/Velnbur/uniswapv2-indexer/internal/data"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-redis/redis/v8"
-	"gitlab.com/distributed_lab/logan/v3/errors"
+	"github.com/pkg/errors"
 )
 
 var _ PathesProvider = &PathesRedisProvider{}
@@ -31,17 +31,16 @@ func (p *PathesRedisProvider) GetPathes(
 	key := fmt.Sprintf(pathesKey, token0.Hex(), token1.Hex())
 
 	raw, err := p.cache.Get(ctx, key).Result()
-
-	pathes := p.parsePathes(raw)
-
-	switch err {
-	case nil:
+	if err == nil {
+		pathes := p.parsePathes(raw)
 		return pathes, nil
-	case redis.Nil:
-		return []data.Path{}, nil
-	default:
-		return []data.Path{}, errors.Wrap(err, "failed to get erc20 symbol")
 	}
+
+	if errors.Is(err, redis.Nil) {
+		return []data.Path{}, nil
+	}
+
+	return []data.Path{}, errors.Wrap(err, "failed to get erc20 symbol")
 }
 
 const (

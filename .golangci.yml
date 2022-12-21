@@ -96,6 +96,7 @@ linters-settings:
     ignore-names:
       - err
       - tx
+      - wg
     ignore-decls:
       - i int
       - T any

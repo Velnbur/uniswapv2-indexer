@@ -24,20 +24,15 @@ const currentBlockKey = "current_block"
 
 // CurrentBlock returns the current block.
 func (p *BlockRedisProvider) CurrentBlock(ctx context.Context) (uint64, error) {
-	if p.block == 0 {
-		block, err := p.redis.Get(ctx, currentBlockKey).Uint64()
-		switch err {
-		case nil:
-			p.block = block
-			return block, nil
-		case redis.Nil:
+	block, err := p.redis.Get(ctx, currentBlockKey).Uint64()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
 			return 0, nil
-		default:
-			return 0, errors.Wrap(err, "failed to get current block")
 		}
+		return 0, errors.Wrap(err, "failed to get current block")
 	}
 
-	return p.block, nil
+	return block, nil
 }
 
 // UpdateBlock updates the current block.

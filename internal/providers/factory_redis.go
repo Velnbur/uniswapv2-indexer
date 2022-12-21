@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-redis/redis/v8"
+	"github.com/pkg/errors"
 )
 
 var _ UniswapV2FactoryProvider = &UniswapV2FactoryRedisProvider{}
@@ -24,14 +25,14 @@ func (p *UniswapV2FactoryRedisProvider) GetPairByIndex(
 	var value string
 	err := p.redis.Get(p.redis.Context(), key).Scan(&value)
 
-	switch err {
-	case nil:
-		return common.HexToAddress(value), nil
-	case redis.Nil:
-		return common.Address{}, nil
-	default:
-		return common.Address{}, err
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return common.Address{}, nil
+		}
+		return common.Address{}, errors.Wrap(err, "failed  to get pair by index")
 	}
+
+	return common.HexToAddress(value), nil
 }
 
 func (p *UniswapV2FactoryRedisProvider) SetPairByIndex(
@@ -59,15 +60,14 @@ func (p *UniswapV2FactoryRedisProvider) GetPairByTokens(
 
 	var value string
 	err := p.redis.Get(p.redis.Context(), key).Scan(&value)
-
-	switch err {
-	case nil:
-		return common.HexToAddress(value), nil
-	case redis.Nil:
-		return common.Address{}, nil
-	default:
-		return common.Address{}, err
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return common.Address{}, nil
+		}
+		return common.Address{}, errors.Wrap(err, "failed to get pair by tokens")
 	}
+
+	return common.HexToAddress(value), nil
 }
 
 func (p *UniswapV2FactoryRedisProvider) SetPairByTokens(

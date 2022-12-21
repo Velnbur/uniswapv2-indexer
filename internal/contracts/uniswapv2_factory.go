@@ -43,7 +43,9 @@ func NewUniswapV2Factory(cfg UniswapV2FactoryConfig) (*UniswapV2Factory, error) 
 		cfg.Address, cfg.Client,
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to create factory", logan.F{
+			"factory_address": cfg.Address,
+		})
 	}
 	return &UniswapV2Factory{
 		address:       cfg.Address,

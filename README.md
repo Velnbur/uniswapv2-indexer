@@ -31,8 +31,8 @@ To generate resources for Go models run `./generate.sh` script in root folder.
 use `./generate.sh --help` to see all available options.
 
 
-## Running from docker 
-  
+## Running from docker
+
 Make sure that docker installed.
 
 use `docker run ` with `-p 8080:80` to expose port 80 to 8080

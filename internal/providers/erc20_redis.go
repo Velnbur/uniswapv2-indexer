@@ -30,14 +30,14 @@ func (p *Erc20RedisProvider) GetSymbol(
 
 	name, err := p.cache.Get(ctx, key).Result()
 
-	switch err {
-	case nil:
+	if err == nil {
 		return name, nil
-	case redis.Nil:
-		return "", nil
-	default:
-		return "", errors.Wrap(err, "failed to get erc20 symbol")
 	}
+	if errors.Is(err, redis.Nil) {
+		return "", nil
+	}
+
+	return "", errors.Wrap(err, "failed to get erc20 symbol")
 }
 
 func (p *Erc20RedisProvider) SetSymbol(

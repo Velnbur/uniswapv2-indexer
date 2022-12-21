@@ -33,5 +33,9 @@ func Run(ctx context.Context, cfg config.Config) {
 	}
 
 	logger.Info("all services started")
+
+	<-ctx.Done()
+
+	logger.Info("stopping all services")
 	wg.Wait()
 }

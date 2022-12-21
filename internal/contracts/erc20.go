@@ -3,12 +3,13 @@ package contracts
 import (
 	"context"
 
-	"github.com/Velnbur/uniswapv2-indexer/generated/erc20"
-	"github.com/Velnbur/uniswapv2-indexer/internal/providers"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/pkg/errors"
+
+	"github.com/Velnbur/uniswapv2-indexer/generated/erc20"
+	"github.com/Velnbur/uniswapv2-indexer/internal/providers"
 )
 
 type Erc20Config struct {

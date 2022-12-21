@@ -19,7 +19,7 @@ func GetBestPath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pathes, err := PathesProvider(r).GetPathes(r.Context(), req.TokenIn, req.TokenOut)
+	_, err = PathesProvider(r).GetPathes(r.Context(), req.TokenIn, req.TokenOut)
 	if err != nil {
 		Log(r).WithError(err).Error("failed to get pathes from provider")
 		ape.RenderErr(w, problems.InternalError())
